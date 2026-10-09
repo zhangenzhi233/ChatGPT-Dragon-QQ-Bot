@@ -1,0 +1,15 @@
+[plugin]
+enabled = false
+config_version = "1.0.0"
+
+[voice]
+voice = "zh-CN-XiaoxiaoNeural"
+rate = "-6%"
+pitch = "+8Hz"
+timeout_seconds = 20
+max_length = 200
+greeting_text = "你好呀，我是 ChatGPT。听到我的声音了吗？慢慢跟我说，今天过得怎么样？"
+
+[access]
+# 空列表默认拒绝所有请求。仅填写获授权使用该语音功能的 QQ 号。
+allowed_user_ids = []

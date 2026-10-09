@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "scenario_id": "long_novel_memory_benchmark_v1",
+    "description": "长篇叙事检索基准，围绕北塔木梯、蓝漆铁盒与海潮图展开，验证导入、摘要写回、人物写回、episode 与工具检索链路。",
+    "designed_for": "A_memorix long novel benchmark",
+    "quantitative_targets": {
+      "search_accuracy_at_1": 0.35,
+      "search_recall_at_5": 0.6,
+      "search_keyword_recall_at_5": 0.8,
+      "writeback_success_rate": 0.66,
+      "knowledge_fetcher_success_rate": 0.66,
+      "profile_success_rate": 0.66,
+      "tool_modes_success_rate": 0.75
+    }
+  },
+  "session": {
+    "session_id": "private:novel:beita",
+    "platform": "qq",
+    "user_id": "10001",
+    "group_id": "",
+    "display_name": "北塔潮痕"
+  },
+  "import_payload": {
+    "paragraphs": [
+      {
+        "content": "北塔木梯第四阶后面的夹层里藏着一个蓝漆铁盒，铁盒里压着卷起的海潮图，图角写着旧码头会在大潮夜开启暗门。",
+        "source": "fixture:long_novel_memory_benchmark",
+        "knowledge_type": "narrative",
+        "entities": ["北塔木梯", "蓝漆铁盒", "海潮图", "旧码头", "暗门"]
+      },
+      {
+        "content": "沈砚秋每次登北塔前都会先用银壳指南针校正方向，再把海潮图折成三折塞回蓝漆铁盒；她提醒顾回，真正藏铁盒的位置不是第七阶，而是北塔木梯第四阶。",
+        "source": "fixture:long_novel_memory_benchmark",
+        "knowledge_type": "narrative",
+        "entities": ["沈砚秋", "银壳指南针", "海潮图", "蓝漆铁盒", "顾回", "北塔木梯第四阶"]
+      },
+      {
+        "content": "顾回在北塔木梯旁的潮痕墙上看见一幅褪色海潮图摹本，他据此确认蓝漆铁盒里的红线标记指向旧码头东侧的石闸门。",
+        "source": "fixture:long_novel_memory_benchmark",
+        "knowledge_type": "narrative",
+        "entities": ["顾回", "北塔木梯", "海潮图", "蓝漆铁盒", "旧码头", "石闸门"]
+      },
+      {
+        "content": "他们后来把蓝漆铁盒重新藏回北塔木梯第四阶后面，只留下海潮图的摹本带去旧码头，避免有人提前发现暗门的位置。",
+        "source": "fixture:long_novel_memory_benchmark",
+        "knowledge_type": "narrative",
+        "entities": ["蓝漆铁盒", "北塔木梯第四阶", "海潮图", "旧码头", "暗门"]
+      }
+    ],
+    "relations": [
+      {
+        "subject": "蓝漆铁盒",
+        "predicate": "藏在",
+        "object": "北塔木梯第四阶后面"
+      },
+      {
+        "subject": "蓝漆铁盒",
+        "predicate": "装有",
+        "object": "海潮图"
+      },
+      {
+        "subject": "海潮图",
+        "predicate": "指向",
+        "object": "旧码头东侧石闸门"
+      },
+      {
+        "subject": "沈砚秋",
+        "predicate": "使用",
+        "object": "银壳指南针"
+      }
+    ]
+  },
+  "chat_history_records": [
+    {
+      "record_id": 930001,
+      "theme": "北塔木梯与蓝漆铁盒",
+      "summary": "沈砚秋和顾回确认蓝漆铁盒一直藏在北塔木梯第四阶后面，铁盒里压着海潮图，海潮图上的红线指向旧码头东侧石闸门；他们最终把铁盒放回原位，只带走摹本继续查暗门。",
+      "participants": ["Mai", "沈砚秋", "顾回"],
+      "start_time": 1775041200.0,
+      "end_time": 1775043600.0,
+      "original_text": "[2026-04-01 18:00] 沈砚秋：我又去摸了一遍北塔木梯，蓝漆铁盒还在第四阶后面的夹层里。\n[2026-04-01 18:02] 顾回：里面那张海潮图的红线还是指着旧码头东侧石闸门，看来暗门位置没有变。\n[2026-04-01 18:04] Mai：你们把铁盒放回去了吗？\n[2026-04-01 18:05] 沈砚秋：放回去了，只带了海潮图摹本，免得别人发现第四阶的夹层。\n[2026-04-01 18:07] 顾回：银壳指南针也重新校过了，等夜潮退下去我们再去旧码头。 "
+    }
+  ],
+  "person_writebacks": [
+    {
+      "person_id": "person-shen-yanqiu",
+      "person_name": "沈砚秋",
+      "memory_content": "沈砚秋习惯用银壳指南针校正方向，确认北塔木梯第四阶后的蓝漆铁盒和海潮图位置后才继续行动。",
+      "expected_keywords": ["沈砚秋", "银壳指南针", "蓝漆铁盒", "海潮图"]
+    }
+  ],
+  "search_cases": [
+    {
+      "query": "蓝漆铁盒 北塔木梯 海潮图 在哪里",
+      "expected_keywords": ["蓝漆铁盒", "北塔木梯", "海潮图"],
+      "minimum_keyword_hits": 2
+    }
+  ],
+  "knowledge_fetcher_cases": [
+    {
+      "query": "他们后来是在什么位置找到蓝漆铁盒和海潮图的？",
+      "expected_keywords": ["蓝漆铁盒", "北塔木梯第四阶", "海潮图"],
+      "minimum_keyword_recall": 0.67
+    }
+  ],
+  "profile_cases": [
+    {
+      "person_id": "person-shen-yanqiu",
+      "expected_keywords": ["沈砚秋", "银壳指南针", "海潮图"],
+      "minimum_keyword_recall": 0.67
+    }
+  ],
+  "episode_cases": [
+    {
+      "query": "那次他们在北塔木梯寻找蓝漆铁盒和海潮图的经过",
+      "expected_keywords": ["蓝漆铁盒", "北塔木梯第四阶", "海潮图"],
+      "minimum_keyword_recall": 0.67
+    }
+  ]
+}

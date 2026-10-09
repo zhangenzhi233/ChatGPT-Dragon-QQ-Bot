@@ -1,0 +1,41 @@
+{
+  "manifest_version": 2,
+  "version": "1.4.0",
+  "name": "Napcat_Adapter 适配器",
+  "description": "插件版Napcat适配器，提供与Napcat的连接功能。",
+  "author": {
+    "name": "MaiBot Team",
+    "url": "https://github.com/Mai-with-u"
+  },
+  "license": "GPL-v3.0-or-later",
+  "urls": {
+    "repository": "https://github.com/Mai-with-u/MaiBot-Napcat-Adapter",
+    "homepage": "https://github.com/Mai-with-u/MaiBot-Napcat-Adapter",
+    "documentation": "https://github.com/Mai-with-u/MaiBot-Napcat-Adapter",
+    "issues": "https://github.com/Mai-with-u/MaiBot-Napcat-Adapter/issues"
+  },
+  "host_application": {
+    "min_version": "1.2.0",
+    "max_version": "1.2.99"
+  },
+  "sdk": {
+    "min_version": "2.5.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [],
+  "capabilities": [
+    "chat.open_session",
+    "component.disable",
+    "component.enable",
+    "message.get_by_id"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "supported_locales": [
+      "zh-CN",
+      "en-US"
+    ]
+  },
+  "id": "maibot-team.napcat-adapter",
+  "plugin_type": "adapter"
+}

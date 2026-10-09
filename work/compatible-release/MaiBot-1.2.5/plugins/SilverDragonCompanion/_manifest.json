@@ -1,0 +1,41 @@
+{
+  "manifest_version": 2,
+  "id": "local.silver-dragon-companion",
+  "version": "1.0.0",
+  "name": "银白龙主动聊天",
+  "description": "每次一键启动成功或运行期间，按主号私聊、双方聊天间隔、QQ 空间动态与当天新闻，由模型自主决定现在是否主动开口以及下次何时再考虑；允许保持沉默，不做固定问候或固定时点群发。",
+  "author": {
+    "name": "zhangenzhi233",
+    "url": "https://github.com/zhangenzhi233"
+  },
+  "license": "MIT",
+  "urls": {
+    "repository": "https://github.com/zhangenzhi233/ChatGPT-Dragon-QQ-Bot",
+    "documentation": "https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/guide.md"
+  },
+  "host_application": {
+    "min_version": "1.2.5",
+    "max_version": "1.2.99"
+  },
+  "sdk": {
+    "min_version": "2.8.1",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [],
+  "capabilities": [
+    "llm.generate",
+    "llm.get_available_models",
+    "chat.get_stream_by_user_id",
+    "message.get_by_time_in_chat",
+    "message.get_recent",
+    "maisaka.proactive.trigger",
+    "api.call",
+    "config.get"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "supported_locales": [
+      "zh-CN"
+    ]
+  }
+}

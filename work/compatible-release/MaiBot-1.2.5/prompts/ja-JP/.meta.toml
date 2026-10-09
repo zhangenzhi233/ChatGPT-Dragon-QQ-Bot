@@ -1,0 +1,139 @@
+[behavior_scene_analyze]
+display_name = "行動シーン分析"
+advanced = true
+description = "直近のチャット文脈を再利用可能な行動シーン断片に分割し、領域タグ、行動ニーズ、相互作用の特徴を抽出するテンプレート。"
+
+[consolidate_behavior]
+display_name = "行動表現の統合"
+advanced = true
+description = "行動表現ライブラリ内の意味的に重複する項目を見つけ、保持対象と統合対象のプランを出力するテンプレート。"
+
+[maisaka_chat]
+display_name = "Planner"
+advanced = false
+description = "Maisaka のメイン計画テンプレート。身份、時刻、ツール説明、チャット文脈を統合し、思考・判断・ツール呼び出しを進める。"
+
+[maisaka_chat_merged_timing]
+display_name = "Planner（タイミング統合）"
+advanced = false
+description = "独立したタイミング判断を使わない場合の Maisaka メイン計画テンプレート。発話タイミングの判断を Planner に統合する。"
+
+[maisaka_replyer]
+display_name = "Replyer"
+advanced = false
+description = "Maisaka の返信生成テンプレート。人格、表現スタイル、グループチャット上の注意点、返信対象の文脈から最終返信を生成する。"
+
+[default_expressor]
+display_name = "既定表現器"
+advanced = true
+description = "表現方式の生成と整理に関するテンプレート。通常は表現システムのデバッグ時だけ編集する。"
+
+[emoji_content_analysis]
+display_name = "絵文字内容分析"
+advanced = true
+description = "絵文字やスタンプ画像の内容を分析するためのテンプレート。"
+
+[emoji_content_filtration]
+display_name = "絵文字内容フィルタ"
+advanced = true
+description = "絵文字やスタンプの内容がフィルタ条件を満たすか判断するためのテンプレート。"
+
+[emoji_replace]
+display_name = "絵文字置換"
+advanced = true
+description = "テキスト文脈に応じて絵文字やスタンプを選択・置換するためのテンプレート。"
+
+[emoji_selection]
+display_name = "絵文字選択"
+advanced = true
+description = "文脈と現在の語調に合わせて、絵文字やスタンプのグリッドから最適なものを選ぶためのテンプレート。"
+
+[evaluate_behavior_feedback]
+display_name = "行動フィードバック評価"
+advanced = true
+description = "選択された行動が実際に採用されたか、採用後にどのような会話結果が生じたかを評価するテンプレート。"
+
+[expression_evaluation]
+display_name = "表現評価"
+advanced = true
+description = "候補表現の品質を評価するためのテンプレート。"
+
+[expression_select]
+display_name = "表現選択"
+advanced = true
+description = "表現ライブラリから適切な表現方式を選択するためのテンプレート。"
+
+[image_description]
+display_name = "画像説明"
+advanced = false
+description = "画像内容をテキスト説明へ変換するためのテンプレート。"
+
+[heuristic_memory_impression]
+display_name = "記憶検索印象"
+advanced = true
+description = "現在のチャット流と直近メッセージから自然言語の印象を生成し、長期記憶の意味検索を補助するテンプレート。"
+
+[jargon_compare_inference]
+display_name = "隠語比較推論"
+advanced = true
+description = "グループ内の隠語の意味を比較・推論するためのテンプレート。"
+
+[jargon_explainer_summarize]
+display_name = "隠語説明要約"
+advanced = true
+description = "隠語説明の結果を要約するためのテンプレート。"
+
+[jargon_inference_content_only]
+display_name = "隠語推論"
+advanced = true
+description = "内容のみから隠語の意味を推論するためのテンプレート。"
+
+[jargon_inference_with_context]
+display_name = "隠語文脈推論"
+advanced = true
+description = "周辺文脈を組み合わせて隠語の意味を推論するためのテンプレート。"
+
+[learn_style]
+display_name = "表現スタイル学習"
+advanced = true
+description = "チャット内容から表現スタイルを学習するためのテンプレート。"
+
+[learn_jargon]
+display_name = "隠語学習"
+advanced = true
+description = "実際のチャットからグループ固有の隠語候補を抽出し、意味と共起分布を更新するためのテンプレート。"
+
+[learn_behavior]
+display_name = "行動表現学習"
+advanced = true
+description = "実際のチャットから再利用可能なシーン・行動・結果のパターンを抽出し、観察学習と自己フィードバックを扱うテンプレート。"
+
+[maisaka_chat_focus]
+display_name = "Focus Planner"
+advanced = true
+description = "Focus モード用の Maisaka 計画テンプレート。現在注目しているチャットとチャット横断概要をもとに次の行動を選択する。"
+
+[maisaka_timing_gate]
+display_name = "Timing Gate"
+advanced = false
+description = "Maisaka のタイミング制御テンプレート。各メインループの前に待機、停止、思考と返信への継続を判断する。"
+
+[memory_fuzzy_modify_plan]
+display_name = "長期記憶の曖昧修正計画"
+advanced = true
+description = "自然言語の修正要求と候補記憶から、失効させる旧記憶と書き込む新記憶を計画するテンプレート。"
+
+[mid_term_memory_summary]
+display_name = "中期チャット要約"
+advanced = true
+description = "コンテキスト裁切時に、削除されるチャット履歴を long_summary、brief、keywords に要約するためのテンプレート。"
+
+[memory_retrieval_react_prompt_head_memory]
+display_name = "記憶検索 ReAct ヘッダー"
+advanced = true
+description = "ReAct 形式の記憶検索フローで使用する高度な記憶検索プロンプトのヘッダー。"
+
+[webui_ai_search]
+display_name = "WebUI AI 検索"
+advanced = true
+description = "自然言語の意図に基づき、WebUI が提供する実在のページと設定候補から関連結果を選択します。"

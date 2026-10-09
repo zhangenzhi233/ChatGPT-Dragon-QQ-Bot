@@ -1,0 +1,400 @@
+{
+  "schema_version": 2,
+  "name": "银白龙 Q 版高清重绘 24 张",
+  "mode": "high_resolution_redraw",
+  "count": 24,
+  "character": {
+    "name": "ChatGPT",
+    "aliases": [
+      "银白龙",
+      "银白龙娘",
+      "银白龙女"
+    ],
+    "confirmed_from": "用户已指定角色，2026-10-04 按当前29张预览复核"
+  },
+  "stickers": [
+    {
+      "id": 1,
+      "name": "你好呀",
+      "file": "png/01_你好呀.png",
+      "tags": [
+        "你好呀",
+        "问候",
+        "打招呼",
+        "开心",
+        "友好"
+      ],
+      "sha256": "f5db6828a1b212d0d7dc0a162e0ebc3a8016def52ba75a31e2a55cd1a3739711",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。挥手打招呼，眨一只眼，面带笑容。图中文字：你好呀。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 2,
+      "name": "收到",
+      "file": "png/02_收到.png",
+      "tags": [
+        "收到",
+        "明白",
+        "确认",
+        "遵命",
+        "答应"
+      ],
+      "sha256": "bd71d18ced160961e7ebf32998b3cd2a70ffc2a71479a76c97b93db0e0e0de35",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。抬手敬礼，眨眼确认。图中文字：收到。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 3,
+      "name": "好的",
+      "file": "png/03_好的.png",
+      "tags": [
+        "好的",
+        "同意",
+        "答应",
+        "乖巧",
+        "开心"
+      ],
+      "sha256": "ad82ea54a3d5c7736b13d7ae6d34b89e0de6885d7da7418e42910ae9bf375be5",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。双手握在胸前，闭眼微笑。图中文字：好的。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 4,
+      "name": "谢谢",
+      "file": "png/04_谢谢.png",
+      "tags": [
+        "谢谢",
+        "感谢",
+        "感动",
+        "礼貌"
+      ],
+      "sha256": "9780034bcea7489a70dbd5a53026ed11c840648e66daeed69d8e901dd4262bd0",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。双手合十，笑着致谢。图中文字：谢谢。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 5,
+      "name": "对不起",
+      "file": "png/05_对不起.png",
+      "tags": [
+        "对不起",
+        "道歉",
+        "抱歉",
+        "愧疚",
+        "委屈"
+      ],
+      "sha256": "b59b8758efae89ab4404009dabadcf252f2145cf2b6bd432b4cb23ef99b3c91b",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。低头闭眼，双手放在胸前，旁边有汗滴。图中文字：对不起。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 6,
+      "name": "加油",
+      "file": "png/06_加油.png",
+      "tags": [
+        "加油",
+        "鼓励",
+        "打气",
+        "支持",
+        "期待"
+      ],
+      "sha256": "7618edc706f656b50fa2b8b2c99a397b73439147198ca182d790bb73b2b23b3d",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。握起双拳，为对方打气。图中文字：加油。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 7,
+      "name": "赞",
+      "file": "png/07_赞.png",
+      "tags": [
+        "赞",
+        "点赞",
+        "表扬",
+        "认可",
+        "优秀"
+      ],
+      "sha256": "87e54bdda9e6b9ee10fa02e91d428dedde5ae3ece3b2783b8ed131a1addc0a8e",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。竖起大拇指，眨眼微笑。图中文字：赞。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 8,
+      "name": "抱抱",
+      "file": "png/08_抱抱.png",
+      "tags": [
+        "抱抱",
+        "拥抱",
+        "安慰",
+        "亲近",
+        "温柔"
+      ],
+      "sha256": "78b0698296adf4ca16f94baf269dd285276efc438dff460cdc67702dffdc0d91",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。张开双臂，闭眼笑，旁边有爱心。图中文字：抱抱。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 9,
+      "name": "晚安",
+      "file": "png/09_晚安.png",
+      "tags": [
+        "晚安",
+        "睡觉",
+        "困了",
+        "休息",
+        "告别"
+      ],
+      "sha256": "0911aa7e0c2dc3ed27d1976059fd69878d2d23b3ee05c1a02bd18c967903b5c3",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。戴着睡帽，闭眼抱着小云团。图中文字：晚安。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 10,
+      "name": "早安",
+      "file": "png/10_早安.png",
+      "tags": [
+        "早安",
+        "早上好",
+        "起床",
+        "问候",
+        "活力"
+      ],
+      "sha256": "f55d44d19e69468d818ff8ad93c65fa2ed1f0d65dedd59e7364ec0575030c774",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。抬手打招呼，旁边有太阳图案。图中文字：早安。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 11,
+      "name": "哈哈哈",
+      "file": "png/11_哈哈哈.png",
+      "tags": [
+        "哈哈哈",
+        "大笑",
+        "开心",
+        "好笑",
+        "欢乐"
+      ],
+      "sha256": "def7782464ab8c0d4f6a41cc52ed6d35824e01f8bdadac48cd90f9c303564baf",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。闭眼大笑，双手放在胸前。图中文字：哈哈哈。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 12,
+      "name": "哭哭",
+      "file": "png/12_哭哭.png",
+      "tags": [
+        "哭哭",
+        "难过",
+        "伤心",
+        "委屈",
+        "求安慰"
+      ],
+      "sha256": "c4df497385302d16be613eb4bfac27e7bb84b1abcb63e616bc2d4ba756964791",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。张嘴大哭，两行眼泪流下。图中文字：哭哭。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 13,
+      "name": "生气",
+      "file": "png/13_生气.png",
+      "tags": [
+        "生气",
+        "气鼓鼓",
+        "不满",
+        "哼",
+        "恼火"
+      ],
+      "sha256": "5cbd2ba08f2cc61215ae2c37e7427763031db35e201468aad4644ededfc9643d",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。皱眉鼓着脸，旁边有红色怒气符号。图中文字：生气。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 14,
+      "name": "震惊",
+      "file": "png/14_震惊.png",
+      "tags": [
+        "震惊",
+        "惊讶",
+        "吃惊",
+        "不可思议",
+        "意外"
+      ],
+      "sha256": "5c7e932d8dd5f7cc2f75824e62416ca9fc9bf8ec699a3c0c0d5de4273e5415d1",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。睁大眼睛、张嘴惊讶，旁边有感叹号。图中文字：震惊。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 15,
+      "name": "无语",
+      "file": "png/15_无语.png",
+      "tags": [
+        "无语",
+        "无奈",
+        "沉默",
+        "尴尬",
+        "吐槽"
+      ],
+      "sha256": "b49b5415712031169cf727b899eb446e641f5726bf73b9a48337a121794f267a",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。半眯眼沉默，旁边有省略号气泡。图中文字：无语。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 16,
+      "name": "在吗",
+      "file": "png/16_在吗.png",
+      "tags": [
+        "在吗",
+        "探头",
+        "询问",
+        "等你",
+        "呼叫"
+      ],
+      "sha256": "ef5e458944ff9399e905e1d185df46b11e312ac39103a4e6bda891b09b42688a",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。从竖直门边探出半个身子，旁边有问号。图中文字：在吗。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 17,
+      "name": "来了来了",
+      "file": "png/17_来了来了.png",
+      "tags": [
+        "来了来了",
+        "我在",
+        "回应",
+        "赶来",
+        "积极"
+      ],
+      "sha256": "6c778de89cb7537bd42b419ae9f259d9cd48d13e7fcc3660605bd50c669d5d09",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。向前伸手赶来，头发向后飘。图中文字：来了来了。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 18,
+      "name": "吃瓜",
+      "file": "png/18_吃瓜.png",
+      "tags": [
+        "吃瓜",
+        "围观",
+        "八卦",
+        "看热闹",
+        "好奇"
+      ],
+      "sha256": "9c0af2939f55a1a68f3b3947db998f9956c2a8656fbefbfd0e54bac5ce37ff45",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。捧着一块西瓜，侧眼看向前方。图中文字：吃瓜。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 19,
+      "name": "摸鱼中",
+      "file": "png/19_摸鱼中.png",
+      "tags": [
+        "摸鱼中",
+        "摸鱼",
+        "犯困",
+        "偷懒",
+        "休息"
+      ],
+      "sha256": "bd53379770b968132124a880fb488cbc681670e33d95aaa6c27bacb1ab96d293",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。闭眼趴在淡蓝小云团上打瞌睡，旁边有小鱼图案。图中文字：摸鱼中。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 20,
+      "name": "太难了",
+      "file": "png/20_太难了.png",
+      "tags": [
+        "太难了",
+        "头疼",
+        "困惑",
+        "苦恼",
+        "学习困难"
+      ],
+      "sha256": "e9720272ee6e9ca200349c5065e734beda79642e84b776e4cc7f5ab0eaffc192",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。闭眼用手扶着额头，旁边有乱线图案。图中文字：太难了。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 21,
+      "name": "破防了",
+      "file": "png/21_破防了.png",
+      "tags": [
+        "破防了",
+        "心碎",
+        "难过",
+        "受伤",
+        "委屈"
+      ],
+      "sha256": "e2f02f240f938801b2dbd829bc9bdb92384c75322e28c1c428aacd5de854905e",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。流着眼泪捧着一颗裂开的粉色爱心。图中文字：破防了。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 22,
+      "name": "稳住",
+      "file": "png/22_稳住.png",
+      "tags": [
+        "稳住",
+        "冷静",
+        "镇定",
+        "安心",
+        "别慌"
+      ],
+      "sha256": "d9b8649e1ba3113d83a061281efb3f616ad41b96fb6dc5c57b856b5dfcf77ee7",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。闭眼双手合十，表情平静。图中文字：稳住。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 23,
+      "name": "冲鸭",
+      "file": "png/23_冲鸭.png",
+      "tags": [
+        "冲鸭",
+        "加油",
+        "奋斗",
+        "行动",
+        "出发"
+      ],
+      "sha256": "d6282d98f010b1f57040bfb81f0048bc8400bd73bc17dba888c5667ff5046ebc",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。睁眼笑着用食指指向前方。图中文字：冲鸭。",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "id": 24,
+      "name": "溜了溜了",
+      "file": "png/24_溜了溜了.png",
+      "tags": [
+        "溜了溜了",
+        "开溜",
+        "告别",
+        "跑路",
+        "调皮"
+      ],
+      "sha256": "07485ef6415b75ec8bfbf8c58356b59e0f9274d6ac5b6600bcf031e9c684128e",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。回头眨眼，一边向旁边跑开。图中文字：溜了溜了。",
+      "width": 1254,
+      "height": 1254
+    }
+  ]
+}

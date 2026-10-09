@@ -1,0 +1,36 @@
+{
+  "maibot": {
+    "original_archive_sha256": "7a26abed14f24e5c8e33f943cb77e179eac975cd2d5e8d79b2c3c4f56fd6080c",
+    "compared_files": 1574,
+    "changed_files": [
+      "prompts/en-US/maisaka_chat.prompt",
+      "prompts/en-US/maisaka_chat_focus.prompt",
+      "prompts/ja-JP/maisaka_chat.prompt",
+      "prompts/ja-JP/maisaka_chat_focus.prompt",
+      "prompts/zh-CN/maisaka_chat.prompt",
+      "prompts/zh-CN/maisaka_chat_focus.prompt",
+      "src/chat/replyer/maisaka_generator_base.py",
+      "src/emoji_system/emoji_manager.py",
+      "src/maisaka/builtin_tool/context.py",
+      "src/maisaka/builtin_tool/reply.py",
+      "src/maisaka/builtin_tool/send_image.py",
+      "src/maisaka/chat_loop_service.py"
+    ],
+    "added_files": [
+      "src/common/personality_prompt.py",
+      "src/emoji_system/emoji_identity.py"
+    ]
+  },
+  "siwc": {
+    "original_archive_sha256": "c07c2df6f32f21dfe3a22ca80c2dc7743f1db78086dbba7b89215da9763ee03f",
+    "compared_files": 107,
+    "changed_files": [
+      "packages/local/src/index.ts",
+      "packages/local/src/types.ts"
+    ],
+    "added_files": [
+      "packages/local/src/raw-responses.ts",
+      "packages/local/test/raw-responses.test.mjs"
+    ]
+  }
+}

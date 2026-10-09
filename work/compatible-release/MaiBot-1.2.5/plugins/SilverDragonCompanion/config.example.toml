@@ -1,0 +1,44 @@
+# 银白龙主动聊天 插件配置示例
+# 复制本文件为 config.toml 并填写后，通过 WebUI 或 configure-companion.py 应用。
+# 默认保持禁用且不填主号：留空主号时会拒绝一切主动触发。
+
+[plugin]
+enabled = false
+config_version = "1.0.0"
+
+[target]
+# 真实主号 QQ（只允许与该账号私聊）；留空默认拒绝。
+main_qq = ""
+# 机器人小号 QQ，用于区分消息角色；留空时非主号消息判为机器人。
+bot_qq = ""
+
+[policy]
+# 下次评估时间由模型在 [min, max] 分钟内选择（非固定聊天时刻）。
+next_check_min_minutes = 15
+next_check_max_minutes = 360
+# 两次主动触发至少间隔的分钟数。
+min_trigger_interval_minutes = 60
+# 每天最多主动触发次数。
+max_triggers_per_day = 3
+# 北京时间静默时段（左闭右开）。0～8 表示 00:00～08:00 不主动开口。
+silent_start_hour = 0
+silent_end_hour = 8
+# 启动判断时，最近 N 分钟内有聊天则先保持沉默。
+startup_recent_chat_silence_minutes = 5
+# 入队前判定“聊天正进行中”的时间窗（秒）。
+ongoing_chat_seconds = 120
+# 采集主号私聊历史的天数 / 最大条数。
+history_days = 7
+history_max_messages = 40
+# 读取主号空间动态条数（0 关闭）。
+feeds_count = 3
+# 调度决策使用的宿主模型任务名；默认 utils（复用已配置的 ChatGPT 模型）。
+model_task_name = "utils"
+
+[news]
+# 是否读取当天新闻作为可选话题（可选，不强制聊新闻）。
+enabled = true
+urls = ["https://www.ithome.com/rss/", "https://www.chinanews.com.cn/rss/scroll-news.xml"]
+fetch_timeout_seconds = 8
+cache_seconds = 300
+max_bytes = 200000

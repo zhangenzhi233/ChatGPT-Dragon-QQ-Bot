@@ -1,0 +1,139 @@
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import path from 'path'
+
+import { dashboardVersionDefine } from './app-version'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [tailwindcss(), react()],
+  define: dashboardVersionDefine,
+  server: {
+    host: '127.0.0.1',
+    port: 7999,
+    watch: {
+      // 依赖目录的本地备份不应进入 Vite 文件监听，否则会占用大量句柄并导致服务无响应。
+      ignored: ['**/node_modules.mixed-backup-*/**'],
+    },
+    allowedHosts: ['sengokucolad.tail1e46b9.ts.net'],
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8001',  // WebUI 后端服务器
+        changeOrigin: true,
+        ws: true,
+        // 确保 Cookie 正确转发
+        cookieDomainRewrite: '',  // 移除域名限制
+        cookiePathRewrite: '/',   // 确保路径一致
+      },
+      '/maibot_statistics.html': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true,
+      },
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+    // CodeMirror 扩展依赖同一份 state/view 单例；混用包管理器时重复实例会导致扩展解析失败。
+    dedupe: ['@codemirror/state', '@codemirror/view'],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 核心库
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+          
+          // TanStack Router
+          'router': ['@tanstack/react-router', '@tanstack/react-virtual'],
+          
+          // Radix UI 组件库
+          radix: [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-select',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-label',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-alert-dialog',
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-collapsible',
+            '@radix-ui/react-context-menu',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slider',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-tabs',
+          ],
+          
+          // 图标库
+          'icons': ['lucide-react'],
+          
+          // 图表库
+          'charts': ['recharts'],
+          
+          // CodeMirror 编辑器（较大，单独分包）
+          'codemirror': [
+            '@uiw/react-codemirror',
+            '@codemirror/lang-javascript',
+            '@codemirror/lang-json',
+            '@codemirror/lang-python',
+            '@codemirror/lint',
+            '@codemirror/theme-one-dark',
+          ],
+          
+          // ReactFlow 流程图（较大，单独分包）
+          'reactflow': ['reactflow', 'dagre'],
+          
+          // Markdown 渲染（较大，单独分包）
+          'markdown': [
+            'react-markdown',
+            'remark-gfm',
+            'remark-math',
+            'rehype-katex',
+            'katex',
+          ],
+          
+          // 文件上传（Uppy）
+          'uppy': [
+            '@uppy/core',
+            '@uppy/dashboard',
+            '@uppy/react',
+            '@uppy/xhr-upload',
+          ],
+          
+          // 拖拽功能
+          'dnd': [
+            '@dnd-kit/core',
+            '@dnd-kit/sortable',
+            '@dnd-kit/utilities',
+          ],
+          
+          // 工具库
+          'utils': [
+            'date-fns',
+            'clsx',
+            'tailwind-merge',
+            'class-variance-authority',
+          ],
+          
+          // 其他
+          'misc': [
+            'react-joyride',
+            'react-day-picker',
+            'cmdk',
+          ],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500, // 降低警告阈值，便于发现大块
+  },
+})

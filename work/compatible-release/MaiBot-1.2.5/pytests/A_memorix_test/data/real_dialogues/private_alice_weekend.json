@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "scenario_id": "private_alice_weekend",
+    "description": "私聊周末回忆场景，用于验证导入/检索/画像/episode 全链路"
+  },
+  "session": {
+    "session_id": "qq_private_10001",
+    "platform": "qq",
+    "user_id": "10001",
+    "group_id": "",
+    "display_name": "小爱"
+  },
+  "import_payload": {
+    "paragraphs": [
+      {
+        "content": "周末我们在北塔木梯旁找到一个蓝漆铁盒，盒里夹着海潮图。",
+        "source": "fixture:private_alice_weekend",
+        "knowledge_type": "narrative",
+        "entities": [
+          "小爱",
+          "蓝漆铁盒",
+          "北塔木梯",
+          "海潮图"
+        ]
+      },
+      {
+        "content": "小爱说蓝漆铁盒是她外公留下的，她会把海潮图带去修复。",
+        "source": "fixture:private_alice_weekend",
+        "knowledge_type": "factual",
+        "entities": [
+          "小爱",
+          "蓝漆铁盒",
+          "海潮图"
+        ]
+      }
+    ],
+    "relations": [
+      {
+        "subject": "小爱",
+        "predicate": "发现",
+        "object": "蓝漆铁盒"
+      },
+      {
+        "subject": "蓝漆铁盒",
+        "predicate": "内含",
+        "object": "海潮图"
+      },
+      {
+        "subject": "小爱",
+        "predicate": "提到地点",
+        "object": "北塔木梯"
+      }
+    ]
+  },
+  "chat_history_record": {
+    "record_id": 900001,
+    "theme": "周末北塔发现",
+    "summary": "小爱在北塔木梯旁找到蓝漆铁盒，铁盒里有海潮图，并计划修复。",
+    "participants": [
+      "小爱",
+      "Mai"
+    ],
+    "start_time": 1732903200.0,
+    "end_time": 1732904100.0,
+    "original_text": "周六傍晚，小爱说她在北塔木梯边发现了一个蓝漆铁盒，里面夹着海潮图，想下周拿去修复。"
+  },
+  "person": {
+    "person_id": "7ee9e14d602520af84e57b8665f8e14d",
+    "person_name": "小爱"
+  },
+  "person_fact": {
+    "memory_content": "小爱熟悉北塔木梯路线，知道蓝漆铁盒里夹着海潮图。"
+  },
+  "search_queries": {
+    "direct": "蓝漆铁盒 北塔木梯 海潮图",
+    "knowledge_fetcher": "小爱周末提到的铁盒和地图是什么"
+  },
+  "expectations": {
+    "search_keywords": [
+      "蓝漆铁盒",
+      "北塔木梯",
+      "海潮图"
+    ],
+    "profile_keywords": [
+      "小爱",
+      "蓝漆铁盒"
+    ],
+    "episode_source": "chat_summary:qq_private_10001"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "银白龙 我喜欢你",
+  "count": 1,
+  "character": {
+    "name": "ChatGPT",
+    "aliases": [
+      "银白龙",
+      "银白龙娘",
+      "银白龙女"
+    ],
+    "confirmed_from": "用户已指定角色，2026-10-04 按当前29张预览复核"
+  },
+  "stickers": [
+    {
+      "id": 29,
+      "name": "我喜欢你",
+      "file": "png/29_我喜欢你.png",
+      "tags": [
+        "我喜欢你",
+        "喜欢",
+        "爱意",
+        "表白",
+        "害羞",
+        "甜蜜"
+      ],
+      "sha256": "06735aff3fbc32f51e8de9dfea84665858f39ad8efd77ad7438b283d6668883e",
+      "visual_description": "ChatGPT 的 Q 版银白龙娘：银白长发、白色双角、尖耳、淡紫龙翼和白紫衣裙。双手捧着粉色爱心，温柔微笑，旁边有小爱心。图中文字：我喜欢你。",
+      "width": 1254,
+      "height": 1254
+    }
+  ]
+}

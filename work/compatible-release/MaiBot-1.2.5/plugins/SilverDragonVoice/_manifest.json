@@ -1,0 +1,49 @@
+{
+  "manifest_version": 2,
+  "id": "local.silver-dragon-voice",
+  "version": "1.0.0",
+  "name": "银白龙按需语音",
+  "description": "仅在当前授权 QQ 私聊中按用户要求发送 Edge TTS 中文语音。",
+  "author": {
+    "name": "zhangenzhi233",
+    "url": "https://github.com/zhangenzhi233"
+  },
+  "license": "MIT",
+  "urls": {
+    "repository": "https://github.com/zhangenzhi233/ChatGPT-Dragon-QQ-Bot",
+    "documentation": "https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/guide.md"
+  },
+  "host_application": {
+    "min_version": "1.2.5",
+    "max_version": "1.2.99"
+  },
+  "sdk": {
+    "min_version": "2.8.1",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [
+    {
+      "type": "plugin",
+      "id": "maibot-team.napcat-adapter",
+      "version_spec": ">=1.4.0"
+    },
+    {
+      "type": "python_package",
+      "name": "edge-tts",
+      "version_spec": "==7.2.8"
+    }
+  ],
+  "capabilities": [
+    "chat.get_stream_by_user_id",
+    "message.get_by_id",
+    "send.hybrid",
+    "send.text",
+    "config.get"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "supported_locales": [
+      "zh-CN"
+    ]
+  }
+}

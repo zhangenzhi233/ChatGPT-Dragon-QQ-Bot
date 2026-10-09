@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QQ AI 本机设置</title>
+<style>
+*{box-sizing:border-box}body{font:16px/1.65 system-ui,"Microsoft YaHei",sans-serif;color:#18202b;background:#f4f6f9;margin:0;padding:28px 16px}main{max-width:800px;margin:auto}h1{font-size:28px;margin:0 0 8px}h2{font-size:20px;margin:0 0 14px}p{margin:8px 0 16px}.card{background:white;border:1px solid #e0e4e9;border-radius:16px;padding:24px;margin:20px 0;box-shadow:0 5px 24px #15233c06}.note{color:#596576;font-size:14px}.status{padding:12px 16px;border-radius:10px;background:#eef2f7;white-space:pre-wrap;overflow-wrap:anywhere}label{display:block;margin:12px 0 5px}input,select{width:100%;border:1px solid #bdc6d1;border-radius:9px;padding:11px;font:inherit}input[type=checkbox]{width:auto;margin-right:8px}button{border:0;border-radius:9px;padding:11px 17px;font:inherit;cursor:pointer;background:#14283e;color:white;margin:12px 8px 0 0}button.secondary{background:#e9edf3;color:#28394a}button:disabled{opacity:.5;cursor:wait}a{color:#245b96}pre{white-space:pre-wrap;margin:12px 0 0}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:600px){.row{grid-template-columns:1fr}.card{padding:18px}}.agree{font-size:14px}#connected{color:#186949}
+#qqQr{image-rendering:pixelated}#qqQr[hidden]{display:none}
+</style></head>
+<body><main>
+<h1>QQ AI 本机设置</h1><p class="note">第一步：连接 ChatGPT，填写专用 QQ 小号。完成后再配置 QQ 扫码和消息测试。</p>
+<section class="card"><h2>1. 连接你的 ChatGPT Plus</h2>
+<p>点击后会打开 OpenAI 官方授权页面，由你自己登录并授权。连接成功后，会使用你的 ChatGPT 方案额度，与 Codex 等工具共享额度。</p>
+<p class="note">只保存这个本机助手的授权信息，使用 Windows 加密保护。不会导入 ChatGPT 历史聊天或记忆。当前接入支持文字与可用模型的图片输入；图片生成需另行配置。</p>
+<div id="connected" class="status">正在检查连接……</div>
+<button id="signin">使用 ChatGPT 登录</button><button id="cancel" class="secondary" hidden>取消登录</button><button id="disconnect" class="secondary" hidden>断开本助手授权</button>
+<p class="note"><a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer">在 ChatGPT 中管理额度</a> · <a href="https://learn.chatgpt.com/docs/sign-in-with-chatgpt" target="_blank" rel="noopener noreferrer">官方说明</a></p>
+<label for="model">可用模型（登录后读取你的账号实际列表）</label><select id="model" disabled><option value="">请先登录</option></select>
+<button id="models" class="secondary" disabled>刷新模型列表</button><button id="test" disabled>发送一条连接测试</button><p class="note">连接测试会向 OpenAI 发送一条固定测试文字，并使用方案额度。</p><div id="testResult" class="status" hidden></div>
+</section>
+<section class="card"><h2>2. 填写 QQ 号</h2><p class="note">这里仅需 QQ 号码。QQ 密码、短信验证码、API Key 都不用填写。之后由你在手机 QQ 上扫描小号的登录二维码。</p>
+<div class="row"><div><label for="botQQ">给 AI 使用的专用 QQ 小号</label><input id="botQQ" inputmode="numeric" autocomplete="off" placeholder="机器人小号"></div><div><label for="ownerQQ">你用来和 AI 聊天的 QQ 号</label><input id="ownerQQ" inputmode="numeric" autocomplete="off" placeholder="你自己的 QQ 号"></div></div>
+<label for="groupQQ">测试群号（可暂留空）</label><input id="groupQQ" inputmode="numeric" autocomplete="off" placeholder="仅用于你指定的测试群">
+<label class="agree"><input id="agree" type="checkbox">我已阅读并同意 MaiBot 的 <a href="/eula" target="_blank" rel="noopener">许可协议</a> 和 <a href="/privacy" target="_blank" rel="noopener">隐私条款</a>。</label><p class="note">MaiBot 会在本机记录消息，并向所选模型服务发送聊天内容以生成回复。群测试时需让参与者知悉。NapCat 使用非官方 QQ 接入，建议使用专用小号。</p>
+<button id="save">保存本机设置</button><div id="saveResult" class="status" hidden></div>
+</section>
+<section class="card" id="qq-login"><h2>3. 登录 QQ 小号</h2><div id="qqStatus" class="status">正在检查 QQ 登录准备……</div><p>用手机 QQ 的专用小号扫描下方二维码，并在手机上确认登录。</p><img id="qqQr" alt="QQ 小号登录二维码" hidden style="width:256px;max-width:100%;display:block;margin:16px auto"><button id="qqRefresh" class="secondary">刷新二维码</button><button id="qqConnect" disabled>已扫码，连接 QQ 助手</button><p class="note">扫码后程序会核对账号是否与你保存的小号一致。核对通过后才接通消息通道。</p></section>
+<section class="card"><h2>运行说明</h2><p>本机设置页可更换模型：刷新模型列表，选择模型后保存，已运行的 QQ 助手会更新模型配置。模型可用性和额度以当前账号为准。</p><p class="note">当前模型额度恢复后再进行真实聊天验证。这个助手需要电脑开机并运行程序才能保持在线。</p></section>
+</main>
+<script nonce="__NONCE__">
+const token='__SETUP_TOKEN__';
+const $=id=>document.getElementById(id);
+let loadedModels=false, polling=null, savedModel='', planPaused=false, qqPolling=null, qqImageUrl=null;
+async function api(path,method='GET',data){const response=await fetch('/api/'+path,{method,headers:{'x-setup-token':token,...(data?{'content-type':'application/json'}:{})},...(data?{body:JSON.stringify(data)}:{})});const result=await response.json();if(!response.ok)throw new Error(result.error||'操作失败');return result;}
+function display(id,text){$(id).hidden=false;$(id).textContent=text;}
+async function refreshModels(){const result=await api('models');const selected=$('model').value||savedModel;$('model').replaceChildren();for(const model of result.models){const option=document.createElement('option');option.value=model.slug;option.textContent=model.displayName;$('model').append(option);}if(result.models.some(model=>model.slug===selected))$('model').value=selected;$('model').disabled=!result.models.length;$('test').disabled=!result.models.length||planPaused;loadedModels=true;}
+async function refreshStatus(initial=false){const value=await api('status');const session=value.session;const connected=session.status==='connected';planPaused=value.modelPause?.paused===true;$('connected').textContent=connected?(session.sharing?'ChatGPT 已连接，方案额度授权已开启。':'账号已登录，但尚未允许使用方案额度。'):(value.signInPending?'等待你在官方页面完成登录与授权……':'ChatGPT 尚未连接。');if(planPaused){const when=new Date(value.modelPause.resumeAfter).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});$('connected').textContent+='\n当前共享额度已达到限制，等待北京时间 '+when+' 后重测。';}if(value.lastError)$('connected').textContent+='\n'+value.lastError.message;$('signin').disabled=value.signInPending;$('signin').textContent=connected?'重新授权 ChatGPT':'使用 ChatGPT 登录';$('cancel').hidden=!value.signInPending;$('disconnect').hidden=!connected;$('models').disabled=!(connected&&session.sharing);if(initial){for(const name of ['botQQ','ownerQQ','groupQQ'])$(name).value=value.setup[name]||'';$('agree').checked=value.setup.agreementsAccepted===true;savedModel=value.setup.selectedModel||'';}if(connected&&session.sharing&&!loadedModels)await refreshModels();if(planPaused)$('test').disabled=true;if(!connected||!session.sharing){$('model').disabled=true;$('test').disabled=true;loadedModels=false;}if(value.signInPending&&!polling)polling=setInterval(()=>refreshStatus().catch(error=>display('connected',error.message)),3000);if(!value.signInPending&&polling){clearInterval(polling);polling=null;}}
+$('signin').onclick=async()=>{try{await api('signin','POST');await refreshStatus();}catch(error){display('connected',error.message);}};
+$('cancel').onclick=async()=>{try{await api('cancel-signin','POST');await refreshStatus();}catch(error){display('connected',error.message);}};
+$('disconnect').onclick=async()=>{try{await api('disconnect','POST');loadedModels=false;await refreshStatus();}catch(error){display('connected',error.message);}};
+$('models').onclick=()=>refreshModels().catch(error=>display('connected',error.message));
+$('test').onclick=async()=>{$('test').disabled=true;display('testResult','正在测试，请等待完整回复……');try{const result=await api('test','POST',{model:$('model').value});display('testResult',result.completed?'完整响应已收到：'+result.text:'测试未完成');}catch(error){display('testResult','测试未成功：'+error.message);}finally{$('test').disabled=planPaused;}};
+$('save').onclick=async()=>{$('save').disabled=true;try{const result=await api('setup','POST',{botQQ:$('botQQ').value,ownerQQ:$('ownerQQ').value,groupQQ:$('groupQQ').value,selectedModel:$('model').disabled?'':$('model').value,agreementsAccepted:$('agree').checked});display('saveResult',result.modelApplied?'已保存在本机，模型配置已更新。':'已保存在本机。继续 QQ 小号扫码。');}catch(error){display('saveResult',error.message);}finally{$('save').disabled=false;}};
+async function loadQr(){const response=await fetch('/api/qq/qr',{headers:{'x-setup-token':token}});if(!response.ok){$('qqQr').hidden=true;return;}if(qqImageUrl)URL.revokeObjectURL(qqImageUrl);qqImageUrl=URL.createObjectURL(await response.blob());$('qqQr').src=qqImageUrl;$('qqQr').hidden=false;}
+async function refreshQq(){const status=await api('qq/status');$('qqConnect').disabled=!(status.loggedIn&&status.accountMatches&&status.coreReady&&!status.isOffline)||status.wsEnabled;$('qqRefresh').disabled=status.loggedIn;$('qqStatus').textContent=status.wsEnabled?'QQ 小号已核对并接通消息通道。':status.loggedIn?(status.accountMatches?(status.coreReady?'已登录正确的小号。点击下方按钮接通 QQ 助手。':'扫码已确认，正在初始化 QQ 消息通道。'):'登录账号与保存的小号不一致，请在 QQ 中更换到专用小号。'):status.ready?'QQ 登录入口已准备好，请扫码。':'QQ 登录程序正在准备，请稍候。';if(status.loggedIn){$('qqQr').hidden=true;}else{await loadQr();}if(!status.wsEnabled&&!qqPolling)qqPolling=setInterval(()=>refreshQq().catch(error=>display('qqStatus',error.message)),5000);if(status.wsEnabled&&qqPolling){clearInterval(qqPolling);qqPolling=null;}}
+$('qqRefresh').onclick=async()=>{try{await api('qq/refresh','POST');setTimeout(()=>refreshQq().catch(error=>display('qqStatus',error.message)),1000);}catch(error){display('qqStatus',error.message);}};
+$('qqConnect').onclick=async()=>{$('qqConnect').disabled=true;try{const result=await api('qq/enable','POST');await refreshQq();if(result.modelWaiting)$('qqStatus').textContent+='\n模型回复等待 ChatGPT 额度恢复后验证。';}catch(error){display('qqStatus',error.message);}};
+refreshStatus(true).catch(error=>display('connected',error.message));
+refreshQq().catch(error=>display('qqStatus',error.message));
+</script></body></html>
