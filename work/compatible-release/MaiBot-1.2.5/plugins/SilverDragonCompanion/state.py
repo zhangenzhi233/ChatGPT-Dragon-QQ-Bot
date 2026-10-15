@@ -14,7 +14,9 @@ from typing import Any
 import json
 import os
 
-SCHEMA_VERSION = 1
+from .continuity import validate_followups
+
+SCHEMA_VERSION = 2
 STATE_FILENAME = "companion-state.json"
 # 去重表最多保留的尝试记录数，防止状态文件无限膨胀。
 MAX_ATTEMPTS = 100
@@ -33,6 +35,12 @@ class AttemptRecord:
     intent: str
     reason: str
     status: str = "pending"
+    task_id: str = ""
+    delivery_status: str = "unconfirmed"
+    basis_kind: str = ""
+    basis_id: str = ""
+    topic_key: str = ""
+    followup_id: str = ""
 
 
 @dataclass
@@ -48,6 +56,8 @@ class CompanionState:
     trigger_day: str = ""
     trigger_count_today: int = 0
     attempts: dict[str, AttemptRecord] = field(default_factory=dict)
+    followups: dict[str, Any] = field(default_factory=dict)
+    last_receipt_check_at: str | None = None
 
 
 class StateStore:
@@ -110,16 +120,20 @@ class StateStore:
             "trigger_day": state.trigger_day,
             "trigger_count_today": state.trigger_count_today,
             "attempts": {key: asdict(record) for key, record in trimmed.items()},
+            "followups": state.followups,
+            "last_receipt_check_at": state.last_receipt_check_at,
         }
 
     @staticmethod
     def _from_dict(raw: Any) -> CompanionState | None:
-        if not isinstance(raw, dict) or raw.get("schema_version") != SCHEMA_VERSION:
+        if not isinstance(raw, dict) or raw.get("schema_version") not in {1, SCHEMA_VERSION}:
+            return None
+        if raw.get("schema_version") == SCHEMA_VERSION and "followups" not in raw:
             return None
         main_qq = raw.get("main_qq")
         if not isinstance(main_qq, str):
             return None
-        for name in ("next_check_at", "last_evaluation_at", "last_trigger_at", "last_startup_at"):
+        for name in ("next_check_at", "last_evaluation_at", "last_trigger_at", "last_startup_at", "last_receipt_check_at"):
             stamp = raw.get(name)
             if stamp is not None:
                 if not isinstance(stamp, str):
@@ -164,9 +178,19 @@ class StateStore:
                 return None
             if decided.tzinfo is None or record.attempt_id != key:
                 return None
+            for name in ("task_id", "delivery_status", "basis_kind", "basis_id", "topic_key", "followup_id"):
+                value_field = value.get(name, getattr(record, name))
+                if not isinstance(value_field, str) or len(value_field) > 300:
+                    return None
+                setattr(record, name, value_field)
+            if record.delivery_status not in {"unconfirmed", "queued", "running", "delivered", "partial", "unknown", "no_reply", "failed", "superseded"}:
+                return None
             attempts[key] = record
         trigger_count = raw.get("trigger_count_today")
         if type(trigger_count) is not int or trigger_count < 0:
+            return None
+        followups = raw.get("followups", {})
+        if not validate_followups(followups):
             return None
         state = CompanionState(
             schema_version=SCHEMA_VERSION,
@@ -178,6 +202,8 @@ class StateStore:
             trigger_day=str(raw.get("trigger_day") or ""),
             trigger_count_today=trigger_count,
             attempts=attempts,
+            followups=followups,
+            last_receipt_check_at=_as_optional_str(raw.get("last_receipt_check_at")),
         )
         return state
 

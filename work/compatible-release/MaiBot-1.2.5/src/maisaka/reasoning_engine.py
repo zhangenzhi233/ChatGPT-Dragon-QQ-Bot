@@ -33,7 +33,13 @@ from src.core.tooling import (
     ToolSpec,
 )
 from src.learners.behavior_selector import behavior_pattern_selector
-from src.llm_models.exceptions import ReqAbortException, RespNotOkException
+from src.llm_models.exceptions import (
+    LLMTaskTimeoutError,
+    ModelAttemptFailed,
+    NetworkConnectionError,
+    ReqAbortException,
+    RespNotOkException,
+)
 from src.llm_models.payload_content.context_item import (
     ContextItemBuilder,
     ContextItemMeta,
@@ -102,6 +108,8 @@ logger = get_logger("maisaka_reasoning_engine")
 HISTORY_DEFERRED_TOOL_RESULT_NAMES = {"wait"}
 TOOL_RESULT_MEDIA_TYPES = {"image", "audio", "resource_link", "resource", "binary"}
 STOP_AFTER_EXECUTION_PAUSE_REASON = "stop_after_execution"
+# Planner 瞬态失败（网络/5xx/超时）的有界恢复退避间隔，最多重试 len(该元组) 次。
+RECOVERY_BACKOFF_SECONDS = (5.0, 15.0)
 BEHAVIOR_SELECTOR_CONTEXT_MESSAGE_LIMIT = 8
 BEHAVIOR_SELECTOR_CONTEXT_TEXT_LIMIT = 1800
 BEHAVIOR_SCENARIO_CONSTRAINT_TEXT = (
@@ -1004,9 +1012,14 @@ class MaisakaReasoningEngine:
         return cycle_end
 
     async def run_loop(self) -> None:
-        """独立消费消息批次，并执行对应的内部思考轮次。"""
-        try:
-            while self._runtime._running:
+        """独立消费消息批次，并执行对应的内部思考轮次。
+
+        单轮内部循环的异常在这里被隔离：失败后结束本轮、记录日志并继续
+        消费队列中的下一个触发，不再因一次失败而让整个后台消费者退出；
+        停止/取消仍通过 CancelledError 立即生效。
+        """
+        while self._runtime._running:
+            try:
                 queued_trigger = await self._runtime._internal_turn_queue.get()
                 if not focus_mode_manager.can_decide(
                     self._runtime.session_id,
@@ -1021,112 +1034,231 @@ class MaisakaReasoningEngine:
                     continue
 
                 cached_messages = turn_start_context.cached_messages
-                trigger_message = turn_start_context.trigger_message
 
                 if turn_start_context.silent_reply_frequency:
-                    await self._handle_silent_turn(
-                        cached_messages=cached_messages,
-                        timeout_triggered=turn_start_context.timeout_triggered,
-                        proactive_triggered=turn_start_context.proactive_triggered,
-                    )
+                    from src.maisaka.proactive_receipts import finish_runtime_task
+
+                    silent_task_id = str(getattr(turn_start_context.trigger_message, "message_id", "") or "")
+                    self._runtime._active_proactive_task_id = silent_task_id if silent_task_id.startswith("proactive:") else None
+                    try:
+                        await self._handle_silent_turn(
+                            cached_messages=cached_messages,
+                            timeout_triggered=turn_start_context.timeout_triggered,
+                            proactive_triggered=turn_start_context.proactive_triggered,
+                        )
+                    finally:
+                        finish_runtime_task(self._runtime)
                     continue
 
+                await self._run_active_turn(turn_start_context)
+            except asyncio.CancelledError:
+                self._runtime._log_internal_loop_cancelled()
+                raise
+            except RespNotOkException as exc:
+                self._runtime._update_stage_status(
+                    "错误",
+                    f"模型响应异常 HTTP {exc.status_code} - {exc}",
+                )
+                logger.error(
+                    f"{self._runtime.log_prefix} Maisaka 内部循环单轮异常: "
+                    f"模型响应异常 HTTP {exc.status_code} - {exc}"
+                )
+                self._finalize_turn("本轮处理失败，等待下一触发")
+            except Exception as exc:
+                self._runtime._update_stage_status("错误", str(exc))
+                logger.exception(f"{self._runtime.log_prefix} Maisaka 内部循环单轮异常")
+                self._finalize_turn("本轮处理失败，等待下一触发")
+
+    def _finalize_turn(self, detail: str = "本轮处理结束") -> None:
+        """一轮内部循环结束后的收尾：清理逻辑轮次并回到停止状态。"""
+
+        self._active_logical_turn_id = None
+        if self._runtime._agent_state == self._runtime._STATE_RUNNING:
+            self._runtime._enter_stop_state()
+        if self._runtime._running:
+            self._runtime._update_stage_status("等待消息", detail)
+
+    async def _run_active_turn(self, turn_start_context: TurnStartContext) -> None:
+        """执行一次非静默的内部思考轮次，处理完成后回到停止状态。"""
+
+        cached_messages = turn_start_context.cached_messages
+        trigger_message = turn_start_context.trigger_message
+
+        from src.maisaka.proactive_receipts import finish_runtime_task
+
+        initial_task_id = str(getattr(trigger_message, "message_id", "") or "")
+        self._runtime._active_proactive_task_id = initial_task_id if initial_task_id.startswith("proactive:") else None
+        receipt_outcome = "finished"
+        try:
+            self._active_logical_turn_id = turn_start_context.logical_turn_id or uuid.uuid4().hex
+            if force_continue_reason := self._runtime._consume_forced_turn_reason():
+                logger.info(f"{self._runtime.log_prefix} {force_continue_reason}")
+            planner_no_tool_count = 0
+            mid_term_reference_refreshed = False
+            round_index = 0
+            while round_index < self._runtime._max_internal_rounds:
+                pending_round_messages = await self._collect_pending_messages_before_next_round(round_index)
+                if pending_round_messages:
+                    finish_runtime_task(self._runtime, outcome="superseded")
+                    cached_messages = pending_round_messages
+                    trigger_message = pending_round_messages[-1]
+
+                cycle_detail, round_text = await self._start_cycle_round(round_index)
+                state = CycleRuntimeState()
                 try:
-                    self._active_logical_turn_id = turn_start_context.logical_turn_id or uuid.uuid4().hex
-                    if force_continue_reason := self._runtime._consume_forced_turn_reason():
-                        logger.info(f"{self._runtime.log_prefix} {force_continue_reason}")
-                    planner_no_tool_count = 0
-                    mid_term_reference_refreshed = False
-                    round_index = 0
-                    while round_index < self._runtime._max_internal_rounds:
-                        pending_round_messages = await self._collect_pending_messages_before_next_round(round_index)
-                        if pending_round_messages:
-                            cached_messages = pending_round_messages
-                            trigger_message = pending_round_messages[-1]
+                    await self._refresh_visual_placeholders_for_cycle(cycle_detail)
+                    if not mid_term_reference_refreshed:
+                        await self._refresh_mid_term_memory_reference_for_continuation(cycle_detail)
+                        mid_term_reference_refreshed = True
 
-                        cycle_detail, round_text = await self._start_cycle_round(round_index)
-                        state = CycleRuntimeState()
-                        try:
-                            await self._refresh_visual_placeholders_for_cycle(cycle_detail)
-                            if not mid_term_reference_refreshed:
-                                await self._refresh_mid_term_memory_reference_for_continuation(cycle_detail)
-                                mid_term_reference_refreshed = True
+                    self._runtime._start_planner_continuation()
+                    await self._run_planner_request_with_recovery(
+                        trigger_message=trigger_message,
+                        source_messages=cached_messages or [trigger_message],
+                        round_index=round_index,
+                        round_text=round_text,
+                        state=state,
+                    )
+                    cycle_detail.time_records["planner"] = state.planner_duration_ms / 1000
+                    # logger.info(
+                    #     f"{self._runtime.log_prefix} 规划器执行完成: "
+                    #     f"回合={round_index + 1} "
+                    #     f"耗时={cycle_detail.time_records['planner']:.3f} 秒"
+                    # )
+                    (
+                        planner_no_tool_count,
+                        should_break_after_action,
+                    ) = await self._handle_planner_response_actions(
+                        response=state.response,
+                        cycle_detail=cycle_detail,
+                        state=state,
+                        planner_no_tool_count=planner_no_tool_count,
+                        planner_extra_lines=state.planner_extra_lines,
+                    )
+                    if should_break_after_action:
+                        break
+                    continue
+                except ReqAbortException as exc:
+                    finish_runtime_task(self._runtime, outcome="superseded")
+                    state.planner_interrupted = True
+                    state.cycle_end = CycleEnd("planner_interrupted", "Planner 被新消息打断，当前轮结束。")
+                    interrupt_result = await self._handle_planner_interrupt(
+                        exc=exc,
+                        round_index=round_index,
+                        round_text=round_text,
+                        current_stage_started_at=state.current_stage_started_at,
+                        action_tool_count=state.action_tool_count,
+                    )
+                    state.response = interrupt_result.response
+                    state.planner_extra_lines = interrupt_result.extra_lines
+                    if not interrupt_result.retry_messages:
+                        break
 
-                            self._runtime._start_planner_continuation()
-                            await self._run_planner_request(
-                                trigger_message=trigger_message,
-                                source_messages=cached_messages or [trigger_message],
-                                round_index=round_index,
-                                round_text=round_text,
-                                state=state,
-                            )
-                            cycle_detail.time_records["planner"] = state.planner_duration_ms / 1000
-                            # logger.info(
-                            #     f"{self._runtime.log_prefix} 规划器执行完成: "
-                            #     f"回合={round_index + 1} "
-                            #     f"耗时={cycle_detail.time_records['planner']:.3f} 秒"
-                            # )
-                            (
-                                planner_no_tool_count,
-                                should_break_after_action,
-                            ) = await self._handle_planner_response_actions(
-                                response=state.response,
-                                cycle_detail=cycle_detail,
-                                state=state,
-                                planner_no_tool_count=planner_no_tool_count,
-                                planner_extra_lines=state.planner_extra_lines,
-                            )
-                            if should_break_after_action:
-                                break
-                            continue
-                        except ReqAbortException as exc:
-                            state.planner_interrupted = True
-                            state.cycle_end = CycleEnd("planner_interrupted", "Planner 被新消息打断，当前轮结束。")
-                            interrupt_result = await self._handle_planner_interrupt(
-                                exc=exc,
-                                round_index=round_index,
-                                round_text=round_text,
-                                current_stage_started_at=state.current_stage_started_at,
-                                action_tool_count=state.action_tool_count,
-                            )
-                            state.response = interrupt_result.response
-                            state.planner_extra_lines = interrupt_result.extra_lines
-                            if not interrupt_result.retry_messages:
-                                break
-
-                            cached_messages = interrupt_result.retry_messages
-                            trigger_message = interrupt_result.retry_messages[-1]
-                            continue
-                        finally:
-                            state.cycle_end = await self._finalize_cycle(
-                                cycle_detail=cycle_detail,
-                                round_index=round_index,
-                                state=state,
-                            )
-                            if not state.planner_interrupted:
-                                round_index += 1
+                    cached_messages = interrupt_result.retry_messages
+                    trigger_message = interrupt_result.retry_messages[-1]
+                    continue
                 finally:
-                    self._active_logical_turn_id = None
-                    if self._runtime._agent_state == self._runtime._STATE_RUNNING:
-                        self._runtime._enter_stop_state()
-                    if self._runtime._running:
-                        self._runtime._update_stage_status("等待消息", "本轮处理结束")
-        except asyncio.CancelledError:
-            self._runtime._log_internal_loop_cancelled()
+                    state.cycle_end = await self._finalize_cycle(
+                        cycle_detail=cycle_detail,
+                        round_index=round_index,
+                        state=state,
+                    )
+                    if not state.planner_interrupted:
+                        round_index += 1
+        except BaseException:
+            receipt_outcome = "failed"
             raise
-        except RespNotOkException as exc:
-            self._runtime._update_stage_status(
-                "错误",
-                f"模型响应异常 HTTP {exc.status_code} - {exc}",
-            )
-            logger.error(
-                f"{self._runtime.log_prefix} Maisaka 内部循环发生异常: 模型响应异常 HTTP {exc.status_code} - {exc}"
-            )
-            raise
-        except Exception as exc:
-            self._runtime._update_stage_status("错误", str(exc))
-            logger.exception(f"{self._runtime.log_prefix} Maisaka 内部循环发生异常")
-            raise
+        finally:
+            try:
+                finish_runtime_task(self._runtime, outcome=receipt_outcome)
+            except (OSError, ValueError, KeyError, TypeError):
+                logger.warning(f"{self._runtime.log_prefix} 主动任务最终回执写入失败，不补发")
+            self._finalize_turn()
+
+    @staticmethod
+    def _is_transient_planner_error(exc: BaseException) -> bool:
+        """判断异常是否为可安全重试的瞬态 Planner 错误（网络/5xx/超时）。
+
+        401/403/429 等权限/额度错误、以及任何已执行工具或已发送后的异常，
+        都不应由本函数判定为可重试；调用方负责保证尚未执行工具/未进入发送。
+        """
+        if isinstance(exc, (NetworkConnectionError, asyncio.TimeoutError, TimeoutError)):
+            return True
+        if isinstance(exc, LLMTaskTimeoutError):
+            return True
+        if isinstance(exc, RespNotOkException):
+            return 500 <= exc.status_code < 600
+        if isinstance(exc, ModelAttemptFailed):
+            return MaisakaReasoningEngine._is_transient_planner_error(exc.original_exception)
+        return False
+
+    async def _wait_for_recovery_backoff(self, seconds: float) -> bool:
+        """退避等待。返回 True 表示期间收到新消息（需让位）；停止/取消抛 CancelledError。"""
+
+        deadline = time.monotonic() + seconds
+        while True:
+            if not self._runtime._running:
+                raise asyncio.CancelledError()
+            if self._runtime._has_pending_messages():
+                return True
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            await asyncio.sleep(min(0.2, remaining))
+
+    async def _run_planner_request_with_recovery(
+        self,
+        *,
+        trigger_message: SessionMessage,
+        source_messages: list[SessionMessage],
+        round_index: int,
+        round_text: str,
+        state: CycleRuntimeState,
+    ) -> None:
+        """执行一次 Planner 请求，并对瞬态失败做有界退避恢复。
+
+        只在尚未执行工具/尚未进入发送阶段时重试瞬态错误（网络/5xx/超时），
+        最多 2 次、退避 5/15 秒；期间若停止/取消或收到新消息则让位。
+        权限/额度错误与已执行工具/已发送后的异常绝不重放。
+        """
+        recovery_attempt = 0
+        while True:
+            try:
+                await self._run_planner_request(
+                    trigger_message=trigger_message,
+                    source_messages=source_messages,
+                    round_index=round_index,
+                    round_text=round_text,
+                    state=state,
+                )
+                return
+            except ReqAbortException:
+                raise
+            except Exception as exc:
+                if not self._is_transient_planner_error(exc):
+                    raise
+                if recovery_attempt >= len(RECOVERY_BACKOFF_SECONDS):
+                    logger.error(
+                        f"{self._runtime.log_prefix} Planner 瞬态失败恢复尝试已用尽 "
+                        f"({recovery_attempt}/{len(RECOVERY_BACKOFF_SECONDS)})，结束本轮: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    raise
+                backoff_seconds = RECOVERY_BACKOFF_SECONDS[recovery_attempt]
+                recovery_attempt += 1
+                logger.warning(
+                    f"{self._runtime.log_prefix} Planner 瞬态失败，"
+                    f"{backoff_seconds:.0f} 秒后重试 "
+                    f"({recovery_attempt}/{len(RECOVERY_BACKOFF_SECONDS)}): "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                new_message_arrived = await self._wait_for_recovery_backoff(backoff_seconds)
+                if new_message_arrived:
+                    logger.info(
+                        f"{self._runtime.log_prefix} Planner 恢复等待期间收到新消息，"
+                        f"放弃旧重试并让位给最新消息"
+                    )
+                    raise ReqAbortException("Planner 瞬态恢复期间收到新消息，放弃旧重试") from exc
 
     async def _handle_silent_turn(
         self,
@@ -2094,7 +2226,9 @@ class MaisakaReasoningEngine:
             )
             tool_started_at = time.time()
             is_unexpanded_tool = not self._runtime.is_action_tool_currently_available(invocation.tool_name)
-            result = await self._runtime._tool_registry.invoke(invocation, execution_context)
+            from src.maisaka.proactive_receipts import invoke_tracked_media
+
+            result = await invoke_tracked_media(self._runtime, self._runtime._tool_registry, invocation, execution_context)
             if invocation.tool_name != "wait":
                 self._runtime._reset_consecutive_wait_count(f"tool:{invocation.tool_name}")
             if is_unexpanded_tool and not result.success:

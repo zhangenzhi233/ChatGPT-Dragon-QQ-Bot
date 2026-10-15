@@ -4,7 +4,7 @@ import random
 import time
 import json
 from pathlib import Path
-from .utils import read_feed, send_feed, monitor_read_feed, reply_feed
+from .utils import read_feed, monitor_read_feed, reply_feed, prepare_feed, publish_prepared_feed
 
 # ===== logger =====
 class NoLogger:
@@ -105,6 +105,12 @@ def _parse_time_to_minutes(time_str: str) -> int | None:
     except (ValueError, AttributeError):
         return None
 
+# 自动发送准备阶段重排：只在 18:00~22:00 窗口内，最多重试 2 次、每次间隔 15 分钟。
+PREP_RETRY_WINDOW_START = "18:00"
+PREP_RETRY_WINDOW_END = "22:00"
+PREP_RETRY_DELAY_MINUTES = 15
+MAX_PREP_RETRIES = 2
+
 class FeedMonitor:
     """
     说说监控任务，根据配置：阅读空间好友最新说说、阅读优先列表说说、回复自己说说下的评论
@@ -188,6 +194,8 @@ class ScheduleSender:
         self.last_reset_date = None  # 记录上次重置发送时间表日期
         self.today_send_enabled = True  # 记录今天是否允许发送说说
         self.attempted_today = False
+        self.prep_retries = 0  # 当天准备阶段重试次数
+        self.prep_next_at = None  # 下一次准备重试时间 "HH:MM"，None 表示无待重试
         self.state_path = Path(__file__).parent / "schedule_state.json"
 
     async def start(self):
@@ -272,28 +280,74 @@ class ScheduleSender:
         current_date = datetime.datetime.now().date()
         return current_date != self.last_reset_date
 
-    def _save_state(self):
-        """随机计划和已尝试标记原子保存，进程重启后沿用。"""
-        value = {"date": self.last_reset_date.isoformat(), "times": self.fluctuate_table,
-                 "send_enabled": self.today_send_enabled, "attempted": self.attempted_today}
-        temporary = self.state_path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8")
-        temporary.replace(self.state_path)
+    def _save_state(self) -> bool:
+        """随机计划与发布/准备记账原子保存，进程重启后沿用；返回是否写入成功。"""
+        value = {
+            "date": self.last_reset_date.isoformat(),
+            "times": self.fluctuate_table,
+            "send_enabled": self.today_send_enabled,
+            "attempted": self.attempted_today,
+            "prep_retries": self.prep_retries,
+            "prep_next_at": self.prep_next_at or "",
+        }
+        try:
+            temporary = self.state_path.with_suffix(".tmp")
+            temporary.write_text(json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8")
+            temporary.replace(self.state_path)
+            return True
+        except Exception as exc:
+            logger.error(f"写入计划状态失败，拒绝自动发布: {exc}")
+            self.today_send_enabled = False
+            self.attempted_today = True
+            self.fluctuate_table = []
+            self.prep_next_at = None
+            return False
 
     def _restore_today_state(self):
+        """恢复当天状态；状态文件损坏时拒绝发布（视为已消费，不补发）。"""
         if self.state_path.exists():
-            value = json.loads(self.state_path.read_text(encoding="utf-8"))
-            if value.get("date") == self.last_reset_date.isoformat():
-                self.today_send_enabled = bool(value["send_enabled"])
-                self.attempted_today = bool(value["attempted"])
-                self.fluctuate_table = [] if self.attempted_today else list(value["times"])
+            try:
+                value = json.loads(self.state_path.read_text(encoding="utf-8"))
+                if not isinstance(value, dict):
+                    raise ValueError("计划状态必须为对象")
+                datetime.date.fromisoformat(value["date"])
+                if type(value.get("attempted")) is not bool or type(value.get("send_enabled")) is not bool:
+                    raise ValueError("计划开关类型错误")
+                times = value.get("times")
+                if not isinstance(times, list) or any(not isinstance(t, str) or _parse_time_to_minutes(t) is None for t in times):
+                    raise ValueError("计划时间无效")
+                retries = value.get("prep_retries", 0)
+                if type(retries) is not int or not 0 <= retries <= MAX_PREP_RETRIES:
+                    raise ValueError("准备重试次数无效")
+                next_at = value.get("prep_next_at", "")
+                if not isinstance(next_at, str) or (next_at and _parse_time_to_minutes(next_at) is None):
+                    raise ValueError("准备重试时间无效")
+            except Exception as exc:
+                logger.error(f"计划状态文件损坏，拒绝自动发布: {exc}")
+                self.today_send_enabled = False
+                self.attempted_today = True
+                self.fluctuate_table = []
+                self.prep_retries = 0
+                self.prep_next_at = None
+                return
+            if isinstance(value, dict) and value.get("date") == self.last_reset_date.isoformat():
+                self.today_send_enabled = bool(value.get("send_enabled", False))
+                self.attempted_today = bool(value.get("attempted", False))
+                self.fluctuate_table = [] if self.attempted_today else list(value.get("times", []))
+                self.prep_retries = int(value.get("prep_retries", 0) or 0)
+                raw_next = value.get("prep_next_at", "")
+                self.prep_next_at = str(raw_next) if raw_next else None
         self._save_state()
 
-    def mark_attempted_today(self):
-        """先记账再进行网络请求；失败或结果不明时当天不自动重发。"""
+    def mark_attempted_today(self) -> bool:
+        """在即将首次调用 publish_emotion 前持久记账；失败/回执不明当天不重发。
+
+        返回是否记账成功；写状态失败时调用方必须拒绝发布。
+        """
         self.attempted_today = True
         self.fluctuate_table = []
-        self._save_state()
+        self.prep_next_at = None
+        return self._save_state()
 
     async def _schedule_loop(self):
         """定时发送循环"""
@@ -304,43 +358,120 @@ class ScheduleSender:
                     logger.info("检测到日期变化，重置发送时间表")
                     self.last_reset_date = datetime.datetime.now().date()
                     self.attempted_today = False
+                    self.prep_retries = 0
+                    self.prep_next_at = None
                     self._generate_fluctuate_table()
                     self._check_today_send_decision()  # 重新决定今天是否发送
                     self._save_state()
 
                 # 获取当前时间
                 current_time = datetime.datetime.now().strftime("%H:%M")
-                if current_time in self.fluctuate_table and self.today_send_enabled:
+
+                # 1) 待重试的准备（prep_next_at）已到时间，优先执行准备重试。
+                if (
+                    self.today_send_enabled
+                    and not self.attempted_today
+                    and self.prep_next_at is not None
+                    and current_time >= self.prep_next_at
+                ):
+                    self.prep_next_at = None  # 消费本次重试
+                    if not self._save_state():
+                        continue
+                    if not self._is_within_prep_retry_window(datetime.datetime.now()):
+                        logger.info("错过准备重试窗口，取消本次重试")
+                        continue
+                    await self._attempt_prepare_and_publish()
+                elif current_time in self.fluctuate_table and self.today_send_enabled:
+                    # 2) 到达计划时间点
                     if time.time() - self.last_send_time >= 60:  # 避免一分钟内重复发送
                         logger.info(f"当前时间 {current_time} ，准备发送说说")
                         self.last_send_time = time.time()
-                        self.mark_attempted_today()
-                        await self.send_scheduled_feed()
-                        logger.info(f"剩余发送时间点: {self.fluctuate_table}")                        
+                        self.fluctuate_table.remove(current_time)
+                        self._save_state()
+                        await self._attempt_prepare_and_publish()
+                        logger.info(f"剩余发送时间点: {self.fluctuate_table}")
                 elif current_time in self.fluctuate_table and not self.today_send_enabled:
                     # 如果到达发送时间但今天不允许发送，也移除该时间点
                     logger.info(f"到达发送时间 {current_time}，但今天不发送说说")
                     self.fluctuate_table.remove(current_time)
+                    self._save_state()
                     logger.info(f"剩余发送时间点: {self.fluctuate_table}")
-                
+
                 await asyncio.sleep(60)  # 每分钟检查一次
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"定时发送任务出错: {e}")
                 await asyncio.sleep(60)
-    async def send_scheduled_feed(self):
-        """发送计划发送的说说"""
-        # 获取配置
+
+    async def _attempt_prepare_and_publish(self):
+        """准备正文与配图；仅在准备成功且能记账时才发布。"""
+        if self.attempted_today or not self.today_send_enabled:
+            return
         enable_random_topic = self.plugin.config.auto_send.random_topic
         fixed_topic = self.plugin.config.auto_send.fixed_topic
-        if enable_random_topic:
-            topic = "随机主题"
-        else:
-            topic = random.choice(fixed_topic)
-        # 发送说说
-        success, message = await send_feed(topic)
+        try:
+            topic = "随机主题" if enable_random_topic else random.choice(fixed_topic)
+            ok, prepared_or_error = await prepare_feed(topic)
+        except Exception as exc:
+            logger.error(f"准备说说异常，尚未发布: {exc}")
+            self._schedule_prep_retry()
+            return
+        if not ok:
+            logger.error(f"准备说说失败: {prepared_or_error}")
+            self._schedule_prep_retry()
+            return
+
+        # 即将首次调用 publish_emotion：此刻持久记账；写失败则拒绝发布。
+        if not self.mark_attempted_today():
+            logger.error("准备完成但无法记账，拒绝发布")
+            return
+
+        success, message = await publish_prepared_feed(prepared_or_error)
         if success:
             logger.info(f"已成功发送定时说说: {topic}")
         else:
-            logger.error(f"发送定时说说失败: {message}")
+            logger.error(f"发布定时说说失败（当天不再重试）: {message}")
+
+    def _schedule_prep_retry(self) -> None:
+        """准备阶段失败时，在 18:00~22:00 窗口内安排有限重试（最多 2 次）。"""
+        if self.attempted_today:
+            return
+        now = datetime.datetime.now()
+        if not self._is_within_prep_retry_window(now):
+            logger.info("准备失败但已不在 18:00~22:00 窗口内，不安排重试")
+            self.prep_next_at = None
+            self._save_state()
+            return
+        if self.prep_retries >= MAX_PREP_RETRIES:
+            logger.info(f"准备重试已达上限（{MAX_PREP_RETRIES} 次），当天不再自动发布")
+            self.prep_next_at = None
+            self._save_state()
+            return
+        next_at = now + datetime.timedelta(minutes=PREP_RETRY_DELAY_MINUTES)
+        window_end = _parse_time_to_minutes(PREP_RETRY_WINDOW_END)
+        if window_end is not None:
+            window_end_dt = now.replace(hour=window_end // 60, minute=window_end % 60, second=0, microsecond=0)
+            if next_at > window_end_dt:
+                self.prep_next_at = None
+                self._save_state()
+                logger.info("15 分钟后的重试已超出窗口，不安排重试")
+                return
+        self.prep_retries += 1
+        self.prep_next_at = next_at.strftime("%H:%M")
+        self._save_state()
+        logger.info(
+            f"准备失败，安排 {PREP_RETRY_DELAY_MINUTES} 分钟后重试"
+            f"（第 {self.prep_retries}/{MAX_PREP_RETRIES} 次）: {self.prep_next_at}"
+        )
+
+    def _is_within_prep_retry_window(self, now: datetime.datetime) -> bool:
+        """判断当前时间是否在 18:00~22:00 重排窗口内。"""
+        start = _parse_time_to_minutes(PREP_RETRY_WINDOW_START)
+        end = _parse_time_to_minutes(PREP_RETRY_WINDOW_END)
+        if start is None or end is None:
+            return False
+        current = now.hour * 60 + now.minute
+        if start <= end:
+            return start <= current <= end
+        return current >= start or current <= end

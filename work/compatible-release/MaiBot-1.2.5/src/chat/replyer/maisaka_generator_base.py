@@ -464,6 +464,34 @@ class BaseMaisakaReplyGenerator:
             )
         return "请注意不要输出多余内容(包括不必要的前后缀，冒号，括号，表情包，@等 )，只输出发言内容就好。"
 
+    def _build_qq_output_instruction(self) -> str:
+        """按 QQ 的普通文字显示能力约束回复；中英日规则一致。"""
+        stream = getattr(self, "chat_stream", None)
+        if stream is None or stream.platform != "qq":
+            return ""
+        locale = self._get_prompt_locale()
+        if locale.startswith("en"):
+            return (
+                "\nQQ displays plain text. Use readable text and Unicode symbols for equations, "
+                "such as I = 2 V / 4 Ω = 0.5 A. Avoid LaTeX delimiters, commands and Markdown bold. "
+                "Use parentheses to preserve precedence. When asked for a natural-language explanation, "
+                "explain each step in words and use only essential equations. Preserve code and requested "
+                "source syntax exactly inside code blocks."
+            )
+        if locale.startswith("ja"):
+            return (
+                "\nQQ は通常のテキストを表示します。数式は I = 2 V / 4 Ω = 0.5 A のような"
+                "読みやすい文字と Unicode 記号で書き、LaTeX の区切りや命令、Markdown の太字を避けてください。"
+                "演算順序は括弧で保ち、自然言語での説明を求められたら各手順を言葉で説明し、数式は必要最小限にします。"
+                "コードや指定されたソース表記はコードブロック内に正確に保持してください。"
+            )
+        return (
+            "\nQQ 只显示普通文字。公式用可直接阅读的文字和 Unicode 符号，例如 I = 2 V / 4 Ω = 0.5 A；"
+            "避免 LaTeX 定界符、命令和 Markdown 加粗。用括号保留运算顺序。"
+            "用户要求自然语言讲解时，逐步用文字说明，只保留必要算式。"
+            "代码及用户要求的源码写法放在代码块内，准确保留。"
+        )
+
     @staticmethod
     def _replace_regex_capture_groups(reaction: str, match: re.Match[str]) -> str:
         """将 reaction 中的 [name] 替换为正则命名捕获组的内容。"""
@@ -573,7 +601,7 @@ class BaseMaisakaReplyGenerator:
             "maisaka_replyer",
             bot_name=global_config.bot.nickname,
             group_chat_attention_block=self._build_group_chat_attention_block(session_id),
-            replyer_output_instruction=self._build_replyer_output_instruction(),
+            replyer_output_instruction=self._build_replyer_output_instruction() + self._build_qq_output_instruction(),
             identity=self._build_personality_prompt(),
             reply_style=self._select_reply_style(),
         )

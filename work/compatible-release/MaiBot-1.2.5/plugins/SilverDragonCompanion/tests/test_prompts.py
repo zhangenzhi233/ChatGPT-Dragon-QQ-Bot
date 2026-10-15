@@ -18,7 +18,7 @@ def test_parse_silence_with_variable_next_time():
 
 def test_parse_chat_with_topic():
     decision = parse_decision(
-        '{"should_chat": true, "topic": "天气", "intent": "聊天气", "next_check_minutes": 60, "reason": "r"}',
+        '{"should_chat": true, "topic": "天气", "intent": "聊天气", "next_check_minutes": 60, "reason": "r", "basis_kind":"natural", "basis_id":""}',
         min_minutes=15,
         max_minutes=360,
     )

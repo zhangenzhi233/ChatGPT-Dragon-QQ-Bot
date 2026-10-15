@@ -1,6 +1,8 @@
 import random
 import base64
 import asyncio
+from io import BytesIO
+from PIL import Image
 from pathlib import Path
 from openai import OpenAI
 import requests
@@ -130,16 +132,91 @@ async def generate_ai_image(message: str, images_prompt: list[str] | None = None
     image_bytes = await generate_image(base_url, api_key, model, image_prompt, reference)
     return image_bytes
 
-async def generate_emoji_image(message: str) -> bytes | None: 
-    """根据message生成表情包图片，返回图片的二进制数据"""
-    emoji = await plugin_context.ctx.emoji.get_by_description(description=message) # type: ignore
-    if emoji is None:
-        logger.error(f"未找到对应的表情包：{message}")
+# 配图选择使用的常见情绪/动作关键词，从正文中提取短标签查询已有表情素材。
+_EMOTION_KEYWORDS = (
+    "开心", "高兴", "快乐", "微笑", "大笑", "难过", "伤心", "哭泣", "委屈",
+    "生气", "愤怒", "惊讶", "震惊", "思考", "疑惑", "害羞", "脸红",
+    "日常", "睡觉", "晚安", "早安", "加油", "打气", "点赞", "比心", "挥手",
+    "打招呼", "谢谢", "抱歉", "得意", "骄傲", "发呆", "叹气", "放松", "悠闲",
+    "元气", "可爱", "帅气", "温柔", "平静", "期待", "兴奋", "疲惫",
+    "关心", "安慰", "休息", "问候", "鼓励",
+)
+# 无匹配时使用的受控通用角色标签，作为明确策略而不是随机拉陌生图。
+_CHARACTER_GENERIC_TAGS = ("问候",)
+
+
+async def _resolve_character_name() -> str:
+    """解析当前角色名（优先从主程序 bot 配置读取）。"""
+    try:
+        bot = await plugin_context.ctx.config.get("bot", {})
+        nickname = str((bot or {}).get("nickname") or "").strip()
+        if nickname:
+            return nickname
+    except Exception as exc:
+        logger.warning(f"读取当前角色名失败：{exc}")
+    return ""
+
+
+async def _emoji_description_to_bytes(description: str) -> bytes | None:
+    """按短标签查询表情素材，并校验返回的 base64 非空。"""
+    try:
+        emoji = await plugin_context.ctx.emoji.get_by_description(description=description)
+    except Exception as exc:
+        logger.warning(f"查询配图标签失败：{description}：{exc}")
+        return None
+    if not isinstance(emoji, dict):
         return None
     base64_data = emoji.get("base64", "")
-    if base64_data:
-        return base64.b64decode(base64_data)
-    logger.error(f"未找到对应的表情包：{message}")
+    if not base64_data:
+        return None
+    try:
+        image_bytes = base64.b64decode(base64_data, validate=True)
+        with Image.open(BytesIO(image_bytes)) as image:
+            image.verify()
+    except Exception as exc:
+        logger.warning(f"解码配图失败：{description}：{exc}")
+        return None
+    return image_bytes if image_bytes else None
+
+
+async def generate_emoji_image(message: str) -> bytes | None:
+    """从正文提取情绪/角色短标签，选取已有银白龙表情素材作为配图。
+
+    不再用整段正文查图（长文必然查不到）；候选必须文件可读、bytes 非空；
+    无匹配时选用已有角色的“问候”素材，仍无匹配则明确返回 None。
+    """
+    character_name = await _resolve_character_name()
+    if not character_name:
+        logger.error("无法确认当前角色，拒绝选择配图")
+        return None
+
+    matched_keywords = [kw for kw in _EMOTION_KEYWORDS if kw in message]
+    matched_keywords.sort(key=len, reverse=True)
+
+    candidates: list[str] = []
+
+    def _add(candidate: str) -> None:
+        candidate = (candidate or "").strip()
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    for keyword in matched_keywords:
+        _add(f"{character_name} {keyword}")
+    for generic in _CHARACTER_GENERIC_TAGS:
+        _add(f"{character_name} {generic}")
+
+    if not candidates:
+        logger.error(f"正文未提取到可用情绪标签，且无可用通用标签：{message[:30]!r}")
+        return None
+
+    for description in candidates:
+        image_bytes = await _emoji_description_to_bytes(description)
+        if image_bytes:
+            logger.info(f"配图命中标签：{description}")
+            return image_bytes
+        logger.debug(f"配图标签无可用素材：{description}")
+
+    logger.error(f"未找到可用配图：正文标签={matched_keywords} 角色={character_name or '无'}")
     return None
 
 async def generate_emoji_images(message: str, number: int) -> list[bytes]:

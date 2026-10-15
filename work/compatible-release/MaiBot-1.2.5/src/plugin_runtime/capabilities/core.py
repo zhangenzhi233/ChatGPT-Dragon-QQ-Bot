@@ -210,6 +210,17 @@ def _normalize_context_segments(raw_segments: Any) -> List[Dict[str, Any]]:
 class RuntimeCoreCapabilityMixin:
     """插件运行时的核心能力混入。"""
 
+    async def _cap_maisaka_proactive_status(self, plugin_id: str, capability: str, args: Dict[str, Any]) -> Any:
+        """只读查询本插件、本会话主动任务的持久投递回执。"""
+        del capability
+        from src.maisaka.proactive_receipts import receipts
+
+        try:
+            record = receipts.get(str(args.get("task_id") or ""), plugin_id, str(args.get("stream_id") or ""))
+            return {"success": True, "receipt": record}
+        except (OSError, ValueError, KeyError, TypeError):
+            return {"success": False, "error": "主动任务回执不可用"}
+
     async def _cap_maisaka_context_append(self, plugin_id: str, capability: str, args: Dict[str, Any]) -> Any:
         """向指定 Maisaka 聊天运行时插入一条图文上下文消息。"""
 

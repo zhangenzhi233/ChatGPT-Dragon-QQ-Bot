@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
 
+from src.chat.utils.qq_text_format import format_qq_text
 from src.chat.utils.utils import ProcessedResponseSegment, process_llm_response, process_llm_response_segments
 from src.common.data_models.message_component_data_model import (
     AtComponent,
@@ -185,9 +186,8 @@ class BuiltinToolRuntimeContext:
             enable_splitter=enable_splitter,
             enable_chinese_typo=enable_chinese_typo,
         ):
-            normalized_segment = segment.strip()
-            if normalized_segment:
-                processed_segments.append(normalized_segment)
+            if segment.strip():
+                processed_segments.append(segment)
 
         if processed_segments:
             return processed_segments
@@ -212,11 +212,10 @@ class BuiltinToolRuntimeContext:
             enable_splitter=enable_splitter,
             enable_chinese_typo=enable_chinese_typo,
         ):
-            normalized_text = segment.text.strip()
-            if normalized_text:
+            if segment.text.strip():
                 processed_segments.append(
                     ProcessedResponseSegment(
-                        normalized_text,
+                        segment.text,
                         quote_previous=segment.quote_previous,
                     )
                 )
@@ -251,6 +250,16 @@ class BuiltinToolRuntimeContext:
         enable_chinese_typo: bool = True,
     ) -> List[PostProcessedReplyMessage]:
         """将纯文本回复处理为带发送提示的组件序列。"""
+
+        # QQ 普通消息不解析数学或 Markdown；在分段前转换，避免拆开公式标记。
+        # 显式跳过后处理的语音等插件仍使用原文，保持其正文授权匹配。
+        runtime = getattr(self, "runtime", None)
+        stream = getattr(runtime, "chat_stream", None)
+        if not skip_post_process and stream is not None and stream.platform == "qq":
+            formatted_text = format_qq_text(reply_text)
+            if formatted_text != reply_text:
+                enable_chinese_typo = False
+            reply_text = formatted_text
 
         return [
             PostProcessedReplyMessage(

@@ -5,11 +5,45 @@ from types import SimpleNamespace
 import pytest
 
 from src.chat.utils.utils import ProcessedResponseSegment
+from src.chat.utils.qq_text_format import format_qq_text
+from src.chat.replyer.maisaka_generator_base import BaseMaisakaReplyGenerator
 from src.maisaka.builtin_tool import context as context_module
 from src.maisaka.builtin_tool.context import BuiltinToolRuntimeContext
 from src.maisaka.builtin_tool.reply import _invoke_before_post_process_hook, _resolve_segment_reply_context
 from src.maisaka.chat_loop_service import register_maisaka_hook_specs
 from src.plugin_runtime.host.hook_spec_registry import HookSpecRegistry
+
+
+@pytest.mark.parametrize("platform", ["qq", "telegram"])
+@pytest.mark.parametrize("skip", [False, True])
+def test_qq_formatting_runs_before_split_and_respects_plugin_skip(platform, skip, monkeypatch) -> None:
+    """QQ 普通回复先格式化，其他平台和语音等显式跳过的回复保留原文。"""
+    text = "答案 **0.5 A**。\n" + r"\[I=\frac{V_C}{4}=\boxed{0.5A}\]"
+    calls = []
+
+    def process(value, **kwargs):
+        calls.append((value, kwargs["enable_chinese_typo"]))
+        return [ProcessedResponseSegment(value)]
+
+    monkeypatch.setattr(context_module, "process_llm_response_segments", process)
+    tool_ctx = object.__new__(BuiltinToolRuntimeContext)
+    tool_ctx.runtime = SimpleNamespace(chat_stream=SimpleNamespace(platform=platform))
+    items = tool_ctx.post_process_reply_message_items(text, skip_post_process=skip)
+    expected = format_qq_text(text) if platform == "qq" and not skip else text
+    assert items[0].sequence.components[0].text == expected
+    assert calls == ([] if skip else [(expected, platform != "qq")])
+    assert not items[0].quote_previous
+
+
+@pytest.mark.parametrize("locale", ["zh-cn", "en-us", "ja-jp"])
+def test_qq_prompt_has_plain_text_rule_in_each_locale(locale, monkeypatch) -> None:
+    generator = object.__new__(BaseMaisakaReplyGenerator)
+    generator.chat_stream = SimpleNamespace(platform="qq")
+    monkeypatch.setattr(generator, "_get_prompt_locale", lambda: locale)
+    instruction = generator._build_qq_output_instruction()
+    assert "QQ" in instruction and "0.5 A" in instruction and "LaTeX" in instruction
+    generator.chat_stream.platform = "telegram"
+    assert generator._build_qq_output_instruction() == ""
 
 
 def test_skip_post_process_returns_original_reply(monkeypatch) -> None:
@@ -120,7 +154,7 @@ async def test_before_post_process_hook_controls_current_reply_only() -> None:
             )
 
     tool_ctx = SimpleNamespace(
-        runtime=SimpleNamespace(session_id="session-1"),
+        runtime=SimpleNamespace(session_id="session-1", chat_stream=SimpleNamespace(is_group_session=True)),
         get_runtime_manager=lambda: RuntimeManager(),
     )
 

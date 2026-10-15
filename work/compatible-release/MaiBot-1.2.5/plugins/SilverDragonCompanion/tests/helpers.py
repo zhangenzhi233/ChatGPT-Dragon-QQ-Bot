@@ -116,6 +116,8 @@ class MockTransport:
             if self.proactive_error is not None:
                 raise self.proactive_error
             return dict(self.proactive_result)
+        if capability == "maisaka.proactive.status":
+            return {"success": True, "receipt": getattr(self, "receipt", None)}
         if capability == "api.call":
             return dict(self.api_result)
         raise AssertionError(f"unexpected capability: {capability}")
@@ -180,7 +182,7 @@ def chat_response(topic: str, minutes: int = 90) -> dict[str, Any]:
     return {
         "success": True,
         "response": (
-            '{"should_chat": true, "topic": "%s", "intent": "聊%s", "next_check_minutes": %d, "reason": "合适"}' % (topic, topic, minutes)
+            '{"should_chat": true, "topic": "%s", "intent": "聊%s", "next_check_minutes": %d, "reason": "合适", "basis_kind":"natural", "basis_id":""}' % (topic, topic, minutes)
         ),
         "reasoning": "",
         "model_name": "gpt-5.6-sol",

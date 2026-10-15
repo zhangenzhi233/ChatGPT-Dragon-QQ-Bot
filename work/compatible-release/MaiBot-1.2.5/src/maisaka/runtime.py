@@ -674,7 +674,12 @@ class MaisakaHeartFlowChatting(MaisakaFocusRuntimeMixin, MaisakaRuntimeDisplayMi
         if not normalized_intent:
             raise ValueError("主动聊天任务缺少 intent")
 
-        task_id = f"proactive:{normalized_plugin_id}:{int(time.time() * 1000)}"
+        from uuid import uuid4
+        from src.maisaka.proactive_receipts import receipts
+
+        task_id = f"proactive:{normalized_plugin_id}:{uuid4().hex}"
+        # 先持久登记，再入队；写入失败不能留下无回执归属的任务。
+        receipts.queue(task_id, normalized_plugin_id, self.session_id)
         detail_lines = [
             f'<plugin_proactive_task id="{task_id}" plugin_id="{normalized_plugin_id}">',
             f"插件请求你主动处理一轮聊天：{normalized_intent}",

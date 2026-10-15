@@ -18,6 +18,7 @@ from src.person_info.person_info import Person
 from src.services.bot_account_service import get_bot_accounts
 from src.services.embedding_service import EmbeddingServiceClient
 
+from .reply_segmenter import contains_fenced_code, split_reply_text
 from .typo_generator import ChineseTypoGenerator
 
 if TYPE_CHECKING:
@@ -550,18 +551,36 @@ def random_remove_punctuation(text: str) -> str:
     return result
 
 
-def _get_random_default_reply() -> str:
-    """获取随机默认回复"""
-    default_replies = [
-        f"{global_config.bot.nickname}不知道哦",
-        f"{global_config.bot.nickname}不知道",
-        "不知道哦",
-        "不知道",
-        "不晓得",
-        "懒得说",
-        "()",
-    ]
-    return random.choice(default_replies)
+def _looks_like_code(text: str) -> bool:
+    """粗略判断文本是否像代码/结构化内容，用于禁用随机错别字。
+
+    仅在出现代码标记且西文占比较高、或带缩进的代码行时判定为代码，
+    避免误伤普通中文句子（中文句子西文占比低，不会被判成代码）。
+    """
+
+    if contains_fenced_code(text):
+        return True
+
+    code_markers = (
+        "def ", "class ", "import ", "from ", "print(", "return ",
+        "if ", "for ", "while ", "elif ", "else:", "try:", "except",
+        "function ", "const ", "let ", "var ", "public ", "private ",
+        "=>", "->", " = ", "==", "!=", "{", "}",
+    )
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        has_marker = any(marker in stripped for marker in code_markers)
+        if not has_marker:
+            continue
+        # 带前导缩进且出现代码标记，视为代码行。
+        if line[:1] in (" ", "\t"):
+            return True
+        # 单行内出现代码标记且西文占比较高时视为代码。
+        if get_western_ratio(stripped) > 0.3:
+            return True
+    return False
 
 
 def process_llm_response_segments(
@@ -569,56 +588,62 @@ def process_llm_response_segments(
     enable_splitter: bool = True,
     enable_chinese_typo: bool = True,
 ) -> list[ProcessedResponseSegment]:
-    """处理回复文本，并保留错别字纠正消息的引用提示。"""
+    """处理回复文本，并保留错别字纠正消息的引用提示。
+
+    不再静默把有效回答替换成默认短句，也不以阈值截断/丢尾部；
+    长文本用确定性分段（120~240 字符），保留括号、换行、缩进与代码块；
+    代码/结构化/长文禁用随机错别字。
+    """
 
     if not global_config.response_post_process.enable_response_post_process:
         return [ProcessedResponseSegment(text)]
 
-    # 先保护颜文字
+    # 先保护颜文字（可选）。
     if global_config.response_splitter.enable_kaomoji_protection:
-        protected_text, kaomoji_mapping = protect_kaomoji(text)
-        logger.debug(f"保护颜文字后的文本: {protected_text}")
+        working_text, kaomoji_mapping = protect_kaomoji(text)
+        logger.debug(f"保护颜文字后的文本: {working_text}")
     else:
-        protected_text = text
+        working_text = text
         kaomoji_mapping = {}
-    # 提取被 () 或 [] 或 （）包裹且包含中文的内容
-    pattern = re.compile(r"[(\[（](?=.*[一-鿿]).*?[)\]）]")
-    _extracted_contents = pattern.findall(protected_text)  # 在保护后的文本上查找
-    # 去除 () 和 [] 及其包裹的内容
-    cleaned_text = pattern.sub("", protected_text)
 
-    if cleaned_text == "":
-        return [ProcessedResponseSegment("呃呃")]
+    # 不再删除含中文的括号内容：保留文字、括号与换行，
+    # 避免把 print("输入数字错误") 这类代码里的中文括号整体删掉。
 
-    logger.debug(f"{text}去除括号处理后的文本: {cleaned_text}")
-
-    # 对清理后的文本进行进一步处理
-    max_length = global_config.response_splitter.max_length * 2
-    max_sentence_num = global_config.response_splitter.max_sentence_num
-    max_split_num = global_config.response_splitter.max_split_num
-    # 如果基本上是中文，则进行长度过滤
-    if get_western_ratio(cleaned_text) < 0.1 and len(cleaned_text) > max_length:
-        logger.warning(f"回复过长 ({len(cleaned_text)} 字符)，返回默认回复")
-        return [ProcessedResponseSegment(_get_random_default_reply())]
-
-    typo_generator = ChineseTypoGenerator(
-        error_rate=global_config.chinese_typo.error_rate,
-        min_freq=global_config.chinese_typo.min_freq,
-        tone_error_rate=global_config.chinese_typo.tone_error_rate,
-        word_replace_rate=global_config.chinese_typo.word_replace_rate,
+    # 随机错别字仅作用于短普通文本；代码/结构化/长文禁用，避免破坏内容。
+    allow_typo = (
+        enable_chinese_typo
+        and bool(global_config.chinese_typo.enable)
+        and len(text) <= 120
+        and not contains_fenced_code(working_text)
+        and not _looks_like_code(working_text)
     )
 
+    # 确定性分段：长文按 120~240 字符自然边界切分；短文本整体作为一条。
     if global_config.response_splitter.enable and enable_splitter:
-        split_sentences = split_into_sentences_w_remove_punctuation(cleaned_text)
+        sentence_texts = split_reply_text(working_text)
     else:
-        split_sentences = [cleaned_text]
+        sentence_texts = [working_text]
+
+    # 长文直接处理原文，避免颜文字占位符跨段、长度变化或误判代码。
+    if not allow_typo:
+        sentence_texts = split_reply_text(text) if global_config.response_splitter.enable and enable_splitter else [text]
+        kaomoji_mapping = {}
+
+    typo_generator = None
+    if allow_typo:
+        typo_generator = ChineseTypoGenerator(
+            error_rate=global_config.chinese_typo.error_rate,
+            min_freq=global_config.chinese_typo.min_freq,
+            tone_error_rate=global_config.chinese_typo.tone_error_rate,
+            word_replace_rate=global_config.chinese_typo.word_replace_rate,
+        )
 
     segments: list[ProcessedResponseSegment] = []
-    for sentence in split_sentences:
-        if global_config.chinese_typo.enable and enable_chinese_typo:
+    for sentence in sentence_texts:
+        if typo_generator is not None:
             typoed_text, typo_corrections = typo_generator.create_typo_sentence(sentence)
             if typo_corrections:
-                # 50%概率新增正确字/词，50%概率用正确分句替换错别字分句
+                # 50%概率新增正确字/词，50%概率用正确分句替换错别字分句。
                 if random.random() < 0.5:
                     quote_previous = (
                         global_config.chinese_typo.enable_correction_quote
@@ -632,29 +657,15 @@ def process_llm_response_segments(
                         )
                     )
                 else:
-                    # 用正确的分句替换错别字分句
+                    # 用正确的分句替换错别字分句。
                     segments.append(ProcessedResponseSegment(sentence))
             else:
                 segments.append(ProcessedResponseSegment(typoed_text))
         else:
             segments.append(ProcessedResponseSegment(sentence))
 
-    if len(segments) > max_sentence_num:
-        if global_config.response_splitter.enable_overflow_return_all:
-            logger.warning(f"分割后消息数量过多 ({len(segments)} 条)，直接返回原文")
-            segments = [ProcessedResponseSegment(cleaned_text)]
-        else:
-            logger.warning(f"分割后消息数量过多 ({len(segments)} 条)，返回默认回复")
-            return [ProcessedResponseSegment(_get_random_default_reply())]
-
-    segments = _merge_processed_segments_to_max_count(segments, max_split_num)
-
-    # if extracted_contents:
-    #     for content in extracted_contents:
-    #         sentences.append(content)
-
-    # 在所有句子处理完毕后，对包含占位符的列表进行恢复
-    if global_config.response_splitter.enable_kaomoji_protection:
+    # 在所有句子处理完毕后，对包含占位符的列表进行恢复。
+    if kaomoji_mapping:
         recovered_sentences = recover_kaomoji([segment.text for segment in segments], kaomoji_mapping)
         segments = [
             ProcessedResponseSegment(
@@ -1057,5 +1068,4 @@ def parse_keywords_string(keywords_input) -> list[str]:
 
     # 如果没有分隔符，返回单个关键词
     return [keywords_str] if keywords_str else []
-
 

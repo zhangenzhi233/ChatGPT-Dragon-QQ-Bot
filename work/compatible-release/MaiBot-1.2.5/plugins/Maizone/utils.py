@@ -296,17 +296,27 @@ async def _mark_processed(fid: str, comment_tid=None) -> bool:
 
 
 # ========== 发送说说 ==========
-async def send_feed(topic: str) -> Tuple[bool, str]:
+class PreparedFeed:
+    """已准备好、尚未发布的说说。"""
+
+    def __init__(self, message: str, images_list: list[bytes], qzone: Any):
+        self.message = message
+        self.images_list = images_list
+        self.qzone = qzone
+
+
+async def prepare_feed(topic: str) -> Tuple[bool, object]:
     """
-    根据主题和配置生成文本和图片，发送至QQ空间，返回是否发送成功和发送结果。
+    生成说说正文与配图，但不发布。
 
     Args:
         topic (str): 要发送的说说主题。
 
     Returns:
-        Tuple[bool, str]:
-        bool: 如果发送成功返回True，否则返回False。
-        str: 发送结果，可能为"已发送说说：【文本内容】" 或 "发送说说失败"。
+        Tuple[bool, object]:
+        bool: 准备成功返回 True，否则返回 False。
+        object: 成功时为 PreparedFeed，失败时为错误消息字符串。
+        准备阶段失败可安全重排，不消耗当天发布额度。
     """
     logger = plugin_context.ctx.logger  # type: ignore
     config = plugin_context.config  # type: ignore
@@ -369,20 +379,46 @@ async def send_feed(topic: str) -> Tuple[bool, str]:
         if not images_list:
             return False, "未找到可用配图，未发布"
 
-    # ===== 6. 发布说说 =====
-    result = await qzone.publish_emotion(message, images_list)
-    if result is not None:
-        record_path = Path(__file__).parent / "last-publish.json"
-        record = {"fid": str(result), "text": message, "requested_images": len(images_list),
-                  "published_at": datetime.datetime.now().astimezone().isoformat()}
+    return True, PreparedFeed(message, images_list, qzone)
+
+
+async def publish_prepared_feed(prepared: PreparedFeed) -> Tuple[bool, str]:
+    """发布已准备好的说说；发布异常/返回 None/回执不明返回 False。
+
+    调用方必须在调用本函数之前完成 attempted 记账，这样发布失败当天不重试。
+    """
+    logger = plugin_context.ctx.logger  # type: ignore
+
+    try:
+        result = await prepared.qzone.publish_emotion(prepared.message, prepared.images_list)
+    except Exception as exc:
+        logger.error(f"发布说说异常（当天不再重试）: {exc}")
+        return False, "说说发布失败"
+
+    if result is None:
+        logger.error("发送说说失败")
+        return False, "说说发布失败"
+
+    record_path = Path(__file__).parent / "last-publish.json"
+    record = {"fid": str(result), "text": prepared.message, "requested_images": len(prepared.images_list),
+              "published_at": datetime.datetime.now().astimezone().isoformat()}
+    try:
         temporary = record_path.with_suffix(".tmp")
         temporary.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         temporary.replace(record_path)
-        logger.info(f"发布说说ID：{result}")
-        return True, f"已发送说说：【{message}】"
-    else:
-        logger.error("发送说说失败")
-        return False, "说说发布失败"
+    except Exception as exc:
+        # 记录发布结果失败不影响已发布状态，仅告警。
+        logger.warning(f"记录发布结果失败: {exc}")
+    logger.info(f"发布说说ID：{result}")
+    return True, f"已发送说说：【{prepared.message}】"
+
+
+async def send_feed(topic: str) -> Tuple[bool, str]:
+    """手动/指令发送：完整准备并发布，不受自动每日计数限制。"""
+    ok, prepared_or_error = await prepare_feed(topic)
+    if not ok:
+        return False, prepared_or_error
+    return await publish_prepared_feed(prepared_or_error)
 
 
 # ========== 阅读特定用户空间 ==========

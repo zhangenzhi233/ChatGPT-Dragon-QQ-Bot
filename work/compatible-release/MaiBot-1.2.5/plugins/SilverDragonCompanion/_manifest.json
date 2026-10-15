@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "id": "local.silver-dragon-companion",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "银白龙主动聊天",
   "description": "每次一键启动成功或运行期间，按主号私聊、双方聊天间隔、QQ 空间动态与当天新闻，由模型自主决定现在是否主动开口以及下次何时再考虑；允许保持沉默，不做固定问候或固定时点群发。",
   "author": {
@@ -29,6 +29,7 @@
     "message.get_by_time_in_chat",
     "message.get_recent",
     "maisaka.proactive.trigger",
+    "maisaka.proactive.status",
     "api.call",
     "config.get"
   ],

@@ -500,7 +500,18 @@ async def handle_tool(
     reply_metadata = _build_monitor_metadata(reply_result)
     sent_message_ids: list[str] = []
     send_results: list[dict[str, Any]] = []
+    from src.maisaka.proactive_receipts import receipts
+
+    proactive_task_id = getattr(tool_ctx.runtime, "_active_proactive_task_id", None)
+    receipt_offset = 0
     try:
+        if proactive_task_id and tool_ctx.runtime._has_pending_messages():
+            from src.maisaka.proactive_receipts import finish_runtime_task
+
+            finish_runtime_task(tool_ctx.runtime, outcome="superseded")
+            return tool_ctx.build_failure_result(invocation.tool_name, "新消息已到达，取消尚未发送的主动回复。")
+        if proactive_task_id:
+            receipt_offset = receipts.plan(proactive_task_id, tool_ctx.runtime.session_id, len(reply_items))
         sent = False
         if tool_ctx.runtime.chat_stream.platform == CLI_PLATFORM_NAME:
             for index, segment in enumerate(reply_segments):
@@ -517,6 +528,12 @@ async def handle_tool(
         else:
             previous_sent_message = None
             for index, reply_item in enumerate(reply_items):
+                if proactive_task_id and tool_ctx.runtime._has_pending_messages():
+                    from src.maisaka.proactive_receipts import finish_runtime_task
+
+                    finish_runtime_task(tool_ctx.runtime, outcome="superseded")
+                    sent = False
+                    break
                 reply_sequence = reply_item.sequence
                 segment = reply_segments[index]
                 segment_set_quote, segment_reply_message = _resolve_segment_reply_context(
@@ -526,6 +543,8 @@ async def handle_tool(
                     target_message=target_message,
                     previous_sent_message=previous_sent_message,
                 )
+                if proactive_task_id:
+                    receipts.segment(proactive_task_id, tool_ctx.runtime.session_id, receipt_offset + index)
                 sent_message = await send_service._send_to_target_with_message(
                     message_sequence=reply_sequence,
                     stream_id=tool_ctx.runtime.session_id,
@@ -538,6 +557,11 @@ async def handle_tool(
                     maisaka_source_kind="guided_reply",
                 )
                 sent = sent_message is not None
+                if proactive_task_id:
+                    receipts.segment(
+                        proactive_task_id, tool_ctx.runtime.session_id, receipt_offset + index,
+                        sent=sent, message_id=str(getattr(sent_message, "message_id", "") or ""),
+                    )
                 if not sent:
                     send_results.append(
                         _build_send_result(
